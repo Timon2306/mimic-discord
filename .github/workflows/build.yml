@@ -17,7 +17,7 @@ jobs:
         include:
           - platform: 'windows-latest'
             args: ''
-          - platform: 'ubuntu-latest'
+          - platform: 'ubuntu-22.04'
             args: ''
 
     runs-on: ${{ matrix.platform }}
@@ -37,14 +37,15 @@ jobs:
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get update
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+          sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/g" /etc/needrestart/needrestart.conf 2>/dev/null || true
+          sudo apt-get -o Acquire::ForceIPv4=true update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::ForceIPv4=true install -y --no-install-recommends \
             libwebkit2gtk-4.1-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev \
             libxdo-dev \
+            libfuse2 \
             patchelf
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libfuse2t64 || sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libfuse2 || true
 
       - name: Install dependencies
         run: npm ci
