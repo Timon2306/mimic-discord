@@ -1,18 +1,25 @@
 export type SpooferStatus = 'idle' | 'running' | 'paused' | 'finished' | 'error';
 
+export type SpoofMode = 'hybrid' | 'process_only' | 'rpc_only';
+
+export type SpoofMethod = 'process' | 'rpc';
+
 export interface ActiveGame {
   id: string;
   name: string;
-  executable: string;
+  executable?: string;
   pid?: number;
   icon_hash?: string;
+  method: 'process' | 'rpc';
 }
 
 export interface SpoofableGameItem {
   id: string;
   name: string;
-  rel_path: string;
+  rel_path?: string | null;
+  arguments?: string | null;
   icon_hash?: string;
+  method: 'process' | 'rpc';
 }
 
 export interface SpooferTickEvent {
@@ -38,8 +45,29 @@ export interface SpooferStatusEvent {
 
 export interface FetchProgressEvent {
   total_fetched: number;
-  win32_count: number;
+  process_count: number;
+  rpc_count: number;
+  history_process_count?: number;
+  history_rpc_count?: number;
   is_loading: boolean;
+}
+
+export interface FetchGamesResponse {
+  total: number;
+  process_count: number;
+  rpc_count: number;
+  history_process_count?: number;
+  history_rpc_count?: number;
+}
+
+export interface SpooferStateResponse {
+  status: SpooferStatus;
+  total_count: number;
+  process_count: number;
+  rpc_count: number;
+  history_count: number;
+  history_process_count?: number;
+  history_rpc_count?: number;
 }
 
 export interface SpooferConfig {
@@ -48,4 +76,9 @@ export interface SpooferConfig {
   hold_duration_secs: number;
   start_offset?: number;
   skip_previously_spoofed?: boolean;
+  spoof_mode: SpoofMode;
+  cooldown_enabled: boolean;
+  cooldown_every_n_batches: number;
+  cooldown_seconds: number;
+  jitter_enabled: boolean;
 }

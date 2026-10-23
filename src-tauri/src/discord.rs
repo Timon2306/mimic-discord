@@ -1,19 +1,31 @@
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SpoofMethod {
+    Process,
+    Rpc,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RawExecutableEntry {
     pub name: String,
     pub os: String,
     #[serde(default)]
-    pub is_launcher: bool,
+    pub arguments: Option<String>,
+    #[serde(default)]
+    pub is_launcher: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RawDetectableApp {
     pub id: String,
     pub name: String,
+    #[serde(default)]
     pub icon_hash: Option<String>,
+    #[serde(default)]
+    pub aliases: Vec<String>,
     #[serde(default)]
     pub executables: Vec<RawExecutableEntry>,
 }
@@ -22,19 +34,26 @@ pub struct RawDetectableApp {
 pub struct SpoofableGame {
     pub id: String,
     pub name: String,
-    pub rel_path: String,
+    pub rel_path: Option<String>,
+    pub arguments: Option<String>,
     pub icon_hash: Option<String>,
+    pub method: SpoofMethod,
 }
 
-/// Normalizes executable name to a safe relative path for Windows
+/// Normalizes executable name to a safe relative path for the host OS
 fn sanitize_relative_path(raw_name: &str) -> Option<PathBuf> {
     let trimmed = raw_name.trim();
     if trimmed.is_empty() {
         return None;
     }
 
-    // Replace forward slashes with backslashes
-    let normalized = trimmed.replace('/', "\\");
+    // Replace both slashes to native separator
+    let normalized = if cfg!(windows) {
+        trimmed.replace('/', "\\")
+    } else {
+        trimmed.replace('\\', "/")
+    };
+
     let path = Path::new(&normalized);
 
     // Ensure path is relative and does not escape via ".."
@@ -51,16 +70,24 @@ fn sanitize_relative_path(raw_name: &str) -> Option<PathBuf> {
     }
 
     if clean_buf.as_os_str().is_empty() {
-        None
-    } else {
-        Some(clean_buf)
+        return None;
     }
+
+    // On Windows, ensure executable has .exe extension if none exists
+    #[cfg(windows)]
+    {
+        if clean_buf.extension().is_none() {
+            clean_buf.set_extension("exe");
+        }
+    }
+
+    Some(clean_buf)
 }
 
-/// Fetches Discord detectable applications database and returns filtered games
+/// Fetches Discord detectable applications database and returns all games categorized
 pub async fn fetch_detectable_applications() -> Result<Vec<SpoofableGame>, String> {
     let client = reqwest::Client::builder()
-        .user_agent("mimic-discord-agent/1.0")
+        .user_agent("mimic-discord-agent/2.0")
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
 
@@ -93,38 +120,43 @@ pub async fn fetch_detectable_applications() -> Result<Vec<SpoofableGame>, Strin
     };
 
     for app in raw_apps {
-        // Find best candidate executable for target OS; if none, fallback to win32
-        let mut candidates: Vec<&RawExecutableEntry> = app
+        // Find best candidate executable for the current target OS ONLY
+        let candidates: Vec<&RawExecutableEntry> = app
             .executables
             .iter()
             .filter(|e| e.os.eq_ignore_ascii_case(target_os))
             .collect();
 
-        if candidates.is_empty() {
-            candidates = app
-                .executables
+        if !candidates.is_empty() {
+            // Priority 1: non-launcher executable
+            // Priority 2: any executable for this OS
+            let best_exe = candidates
                 .iter()
-                .filter(|e| e.os.eq_ignore_ascii_case("win32"))
-                .collect();
+                .find(|e| e.is_launcher != Some(true))
+                .unwrap_or(&candidates[0]);
+
+            if let Some(clean_path) = sanitize_relative_path(&best_exe.name) {
+                result.push(SpoofableGame {
+                    id: app.id,
+                    name: app.name,
+                    rel_path: Some(clean_path.to_string_lossy().to_string()),
+                    arguments: best_exe.arguments.clone(),
+                    icon_hash: app.icon_hash,
+                    method: SpoofMethod::Process,
+                });
+                continue;
+            }
         }
 
-        if candidates.is_empty() {
-            continue;
-        }
-
-        let best_exe = candidates
-            .iter()
-            .find(|e| !e.is_launcher)
-            .unwrap_or(&candidates[0]);
-
-        if let Some(clean_path) = sanitize_relative_path(&best_exe.name) {
-            result.push(SpoofableGame {
-                id: app.id,
-                name: app.name,
-                rel_path: clean_path.to_string_lossy().to_string(),
-                icon_hash: app.icon_hash,
-            });
-        }
+        // Fallback for games without native binaries: categorize as RPC
+        result.push(SpoofableGame {
+            id: app.id,
+            name: app.name,
+            rel_path: None,
+            arguments: None,
+            icon_hash: app.icon_hash,
+            method: SpoofMethod::Rpc,
+        });
     }
 
     Ok(result)
@@ -150,7 +182,6 @@ pub fn is_discord_running() -> bool {
 
         if Process32FirstW(snapshot, &mut entry) != 0 {
             loop {
-                // Read null-terminated wide string
                 let null_pos = entry
                     .szExeFile
                     .iter()
@@ -181,7 +212,7 @@ pub fn is_discord_running() -> bool {
 
 #[cfg(unix)]
 pub fn is_discord_running() -> bool {
-    // Universal Unix check (macOS & Linux) using standard pgrep
+    // Universal Unix check (macOS & Linux / ALT Linux / Flatpak)
     std::process::Command::new("pgrep")
         .arg("-i")
         .arg("discord")

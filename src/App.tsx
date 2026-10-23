@@ -15,6 +15,11 @@ export const App: React.FC = () => {
     batch_size: 8,
     hold_duration_secs: 15,
     skip_previously_spoofed: true,
+    spoof_mode: 'hybrid',
+    cooldown_enabled: true,
+    cooldown_every_n_batches: 25,
+    cooldown_seconds: 30,
+    jitter_enabled: false,
   });
 
   const {
@@ -28,7 +33,11 @@ export const App: React.FC = () => {
     tickData,
     logs,
     totalDatabaseGames,
+    processGamesCount,
+    rpcGamesCount,
     historyCount,
+    historyProcessCount,
+    historyRpcCount,
     isFetchingDatabase,
     actions,
   } = useSpooferEvents();
@@ -65,7 +74,11 @@ export const App: React.FC = () => {
               status={status}
               tickData={tickData}
               totalAvailableGames={totalDatabaseGames}
+              processGamesCount={processGamesCount}
+              rpcGamesCount={rpcGamesCount}
               historyCount={historyCount}
+              historyProcessCount={historyProcessCount}
+              historyRpcCount={historyRpcCount}
               logs={logs}
               config={config}
               onConfigChange={setConfig}
@@ -94,6 +107,8 @@ export const App: React.FC = () => {
               onConfigChange={setConfig}
               historyCount={historyCount}
               onClearHistory={actions.clearHistory}
+              onExportHistory={actions.exportHistory}
+              onImportHistory={actions.importHistory}
               isDiscordRunning={isDiscordRunning}
               onRecheckDiscord={recheckDiscord}
             />

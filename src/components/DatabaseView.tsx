@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, RefreshCw } from 'lucide-react';
+import { Search, RefreshCw, Layers, Cpu, Radio, Gamepad2 } from 'lucide-react';
 import { tauriApi } from '@/lib/tauri';
 import type { SpoofableGameItem } from '@/types/spoofer';
 
@@ -9,12 +9,15 @@ interface DatabaseViewProps {
   historyCount?: number;
 }
 
+type FilterType = 'all' | 'process' | 'rpc';
+
 export const DatabaseView: React.FC<DatabaseViewProps> = ({
   onRefresh,
   isFetching,
 }) => {
   const [games, setGames] = useState<SpoofableGameItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [isLoadingList, setIsLoadingList] = useState(true);
 
   useEffect(() => {
@@ -32,12 +35,20 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
     loadGames();
   }, [isFetching]);
 
+  const processCount = games.filter((g) => g.method === 'process').length;
+  const rpcCount = games.filter((g) => g.method === 'rpc').length;
+
   const filteredGames = games.filter((game) => {
+    // 1. Method filter
+    if (activeFilter === 'process' && game.method !== 'process') return false;
+    if (activeFilter === 'rpc' && game.method !== 'rpc') return false;
+
+    // 2. Search term
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
     return (
       game.name.toLowerCase().includes(term) ||
-      game.rel_path.toLowerCase().includes(term) ||
+      (game.rel_path && game.rel_path.toLowerCase().includes(term)) ||
       game.id.includes(term)
     );
   });
@@ -47,11 +58,12 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-white/5">
         <div>
-          <h2 className="text-sm font-semibold text-white">
-            БазаDetectable игр Discord
+          <h2 className="text-sm font-semibold text-white flex items-center gap-2">
+            <Layers className="w-4 h-4 text-[#5865F2]" />
+            Каталог Detectable игр Discord
           </h2>
-          <p className="text-xs text-neutral-400">
-            {games.length.toLocaleString()} игр для Windows в официальной базе
+          <p className="text-xs text-neutral-400 mt-0.5">
+            {games.length.toLocaleString()} игр в базе ({processCount.toLocaleString()} процессов + {rpcCount.toLocaleString()} Discord RPC)
           </p>
         </div>
 
@@ -61,7 +73,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
             <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Поиск по названию или .exe..."
+              placeholder="Поиск по названию, ID или .exe..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full bg-[#1b1c28] border border-white/10 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-[#5865F2]"
@@ -80,6 +92,56 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
             />
           </button>
         </div>
+      </div>
+
+      {/* Filter Tabs */}
+      <div className="flex items-center gap-2 pb-1 text-xs">
+        <button
+          type="button"
+          onClick={() => setActiveFilter('all')}
+          className={`px-3 py-1.5 rounded-lg border transition-all flex items-center gap-1.5 ${
+            activeFilter === 'all'
+              ? 'bg-[#5865F2]/20 border-[#5865F2] text-white font-semibold'
+              : 'bg-[#1b1c28] border-white/5 text-neutral-400 hover:text-white'
+          }`}
+        >
+          <span>Все</span>
+          <span className="font-mono text-[10px] opacity-75">
+            ({games.length.toLocaleString()})
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveFilter('process')}
+          className={`px-3 py-1.5 rounded-lg border transition-all flex items-center gap-1.5 ${
+            activeFilter === 'process'
+              ? 'bg-[#3b82f6]/20 border-[#3b82f6] text-[#60a5fa] font-semibold'
+              : 'bg-[#1b1c28] border-white/5 text-neutral-400 hover:text-white'
+          }`}
+        >
+          <Cpu className="w-3 h-3" />
+          <span>Нативные процессы</span>
+          <span className="font-mono text-[10px] opacity-75">
+            ({processCount.toLocaleString()})
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveFilter('rpc')}
+          className={`px-3 py-1.5 rounded-lg border transition-all flex items-center gap-1.5 ${
+            activeFilter === 'rpc'
+              ? 'bg-[#8b5cf6]/20 border-[#8b5cf6] text-[#a78bfa] font-semibold'
+              : 'bg-[#1b1c28] border-white/5 text-neutral-400 hover:text-white'
+          }`}
+        >
+          <Radio className="w-3 h-3" />
+          <span>Discord RPC / Консоли</span>
+          <span className="font-mono text-[10px] opacity-75">
+            ({rpcCount.toLocaleString()})
+          </span>
+        </button>
       </div>
 
       {/* Games Table List */}
@@ -110,17 +172,26 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
                       }}
                     />
                   ) : (
-                    <div className="w-6 h-6 rounded bg-[#242738] flex items-center justify-center text-[#5865F2] flex-shrink-0 text-xs">
-                      🎮
+                    <div className="w-6 h-6 rounded bg-[#242738] flex items-center justify-center flex-shrink-0">
+                      <Gamepad2 className="w-3.5 h-3.5 text-[#5865F2]" />
                     </div>
                   )}
 
                   <div className="min-w-0">
-                    <div className="font-medium text-white truncate">
-                      {game.name}
+                    <div className="font-medium text-white truncate flex items-center gap-2">
+                      <span className="truncate">{game.name}</span>
+                      {game.method === 'process' ? (
+                        <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 flex-shrink-0">
+                          PROCESS
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 flex-shrink-0">
+                          RPC
+                        </span>
+                      )}
                     </div>
                     <div className="font-mono text-[10px] text-neutral-400 truncate">
-                      {game.rel_path}
+                      {game.rel_path ? game.rel_path : 'Discord SDK / Console Activity'}
                     </div>
                   </div>
                 </div>

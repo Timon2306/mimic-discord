@@ -1,6 +1,7 @@
 pub mod commands;
 pub mod discord;
 pub mod history;
+pub mod rpc;
 pub mod spoofer;
 pub mod state;
 
@@ -20,6 +21,8 @@ pub fn run() {
             commands::check_discord_status,
             commands::get_spoofer_state,
             commands::clear_history,
+            commands::export_history,
+            commands::import_history,
         ])
         .run(tauri::generate_context!())
         .expect("error while running mimic desktop application");

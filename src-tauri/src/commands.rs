@@ -1,5 +1,5 @@
-use crate::discord::{fetch_detectable_applications, is_discord_running};
-use crate::history::{clear_history as clear_history_fs, load_history};
+use crate::discord::{fetch_detectable_applications, is_discord_running, SpoofMethod};
+use crate::history::{clear_history as clear_history_fs, load_history, save_history};
 use crate::spoofer::{force_kill_pid, run_spoofer};
 use crate::state::{AppState, FetchProgressEvent, SpooferConfig, SpooferStatus};
 use serde::Serialize;
@@ -9,14 +9,21 @@ use tauri::{AppHandle, Emitter, State};
 #[derive(Serialize)]
 pub struct FetchGamesResponse {
     pub total: usize,
-    pub win32: usize,
+    pub process_count: usize,
+    pub rpc_count: usize,
+    pub history_process_count: usize,
+    pub history_rpc_count: usize,
 }
 
 #[derive(Serialize)]
 pub struct SpooferStateResponse {
     pub status: SpooferStatus,
-    pub win32_count: usize,
+    pub total_count: usize,
+    pub process_count: usize,
+    pub rpc_count: usize,
     pub history_count: usize,
+    pub history_process_count: usize,
+    pub history_rpc_count: usize,
 }
 
 #[tauri::command]
@@ -28,13 +35,27 @@ pub async fn fetch_games(
         "fetch_progress",
         FetchProgressEvent {
             total_fetched: 0,
-            win32_count: 0,
+            process_count: 0,
+            rpc_count: 0,
+            history_process_count: 0,
+            history_rpc_count: 0,
             is_loading: true,
         },
     );
 
     let games = fetch_detectable_applications().await?;
-    let win32_count = games.len();
+    let history = load_history();
+    let total = games.len();
+    let process_count = games.iter().filter(|g| g.method == SpoofMethod::Process).count();
+    let rpc_count = games.iter().filter(|g| g.method == SpoofMethod::Rpc).count();
+    let history_process_count = games
+        .iter()
+        .filter(|g| g.method == SpoofMethod::Process && history.contains(&g.id))
+        .count();
+    let history_rpc_count = games
+        .iter()
+        .filter(|g| g.method == SpoofMethod::Rpc && history.contains(&g.id))
+        .count();
 
     {
         let mut db = state.games_db.write().await;
@@ -44,15 +65,21 @@ pub async fn fetch_games(
     let _ = app.emit(
         "fetch_progress",
         FetchProgressEvent {
-            total_fetched: win32_count,
-            win32_count,
+            total_fetched: total,
+            process_count,
+            rpc_count,
+            history_process_count,
+            history_rpc_count,
             is_loading: false,
         },
     );
 
     Ok(FetchGamesResponse {
-        total: win32_count,
-        win32: win32_count,
+        total,
+        process_count,
+        rpc_count,
+        history_process_count,
+        history_rpc_count,
     })
 }
 
@@ -209,12 +236,28 @@ pub fn check_discord_status() -> Result<bool, String> {
 #[tauri::command]
 pub async fn get_spoofer_state(state: State<'_, AppState>) -> Result<SpooferStateResponse, String> {
     let status = *state.status.read().await;
-    let win32_count = state.games_db.read().await.len();
-    let history_count = load_history().len();
+    let games = state.games_db.read().await;
+    let history = load_history();
+    let total_count = games.len();
+    let process_count = games.iter().filter(|g| g.method == SpoofMethod::Process).count();
+    let rpc_count = games.iter().filter(|g| g.method == SpoofMethod::Rpc).count();
+    let history_count = history.len();
+    let history_process_count = games
+        .iter()
+        .filter(|g| g.method == SpoofMethod::Process && history.contains(&g.id))
+        .count();
+    let history_rpc_count = games
+        .iter()
+        .filter(|g| g.method == SpoofMethod::Rpc && history.contains(&g.id))
+        .count();
     Ok(SpooferStateResponse {
         status,
-        win32_count,
+        total_count,
+        process_count,
+        rpc_count,
         history_count,
+        history_process_count,
+        history_rpc_count,
     })
 }
 
@@ -227,4 +270,25 @@ pub async fn get_games_list(state: State<'_, AppState>) -> Result<Vec<crate::dis
 #[tauri::command]
 pub fn clear_history() -> Result<(), String> {
     clear_history_fs()
+}
+
+#[tauri::command]
+pub fn export_history() -> Result<String, String> {
+    let history = load_history();
+    let list: Vec<String> = history.into_iter().collect();
+    serde_json::to_string_pretty(&list).map_err(|e| format!("Failed to export history: {}", e))
+}
+
+#[tauri::command]
+pub fn import_history(json_data: String) -> Result<usize, String> {
+    let imported_list: Vec<String> = serde_json::from_str(&json_data)
+        .map_err(|e| format!("Invalid history JSON format: {}", e))?;
+    let mut current = load_history();
+    let before_len = current.len();
+    for id in imported_list {
+        current.insert(id);
+    }
+    let added = current.len() - before_len;
+    save_history(&current)?;
+    Ok(added)
 }

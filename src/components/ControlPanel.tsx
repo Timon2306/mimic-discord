@@ -42,6 +42,11 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
       batch_size: batchSize,
       hold_duration_secs: holdDurationSecs,
       skip_previously_spoofed: skipPreviouslySpoofed,
+      spoof_mode: 'hybrid',
+      cooldown_enabled: true,
+      cooldown_every_n_batches: 25,
+      cooldown_seconds: 30,
+      jitter_enabled: false,
     });
   };
 

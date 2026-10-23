@@ -24,10 +24,13 @@ export function useSpooferEvents() {
 
   const [logs, setLogs] = useState<SpooferLogEvent[]>([]);
   const [totalDatabaseGames, setTotalDatabaseGames] = useState<number>(0);
+  const [processGamesCount, setProcessGamesCount] = useState<number>(0);
+  const [rpcGamesCount, setRpcGamesCount] = useState<number>(0);
   const [historyCount, setHistoryCount] = useState<number>(0);
+  const [historyProcessCount, setHistoryProcessCount] = useState<number>(0);
+  const [historyRpcCount, setHistoryRpcCount] = useState<number>(0);
   const [isFetchingDatabase, setIsFetchingDatabase] = useState<boolean>(false);
 
-  // Keep ref for logs to avoid stale closures in listeners
   const logIdCounter = useRef(0);
 
   const addLog = useCallback(
@@ -90,7 +93,15 @@ export function useSpooferEvents() {
         });
 
         unlistenFetch = await tauriApi.onFetchProgress((payload) => {
-          setTotalDatabaseGames(payload.win32_count);
+          setTotalDatabaseGames(payload.total_fetched);
+          setProcessGamesCount(payload.process_count);
+          setRpcGamesCount(payload.rpc_count);
+          if (payload.history_process_count !== undefined) {
+            setHistoryProcessCount(payload.history_process_count);
+          }
+          if (payload.history_rpc_count !== undefined) {
+            setHistoryRpcCount(payload.history_rpc_count);
+          }
           setIsFetchingDatabase(payload.is_loading);
         });
 
@@ -98,8 +109,16 @@ export function useSpooferEvents() {
         try {
           const state = await tauriApi.getSpooferState();
           setStatus(state.status);
-          setTotalDatabaseGames(state.win32_count);
+          setTotalDatabaseGames(state.total_count);
+          setProcessGamesCount(state.process_count);
+          setRpcGamesCount(state.rpc_count);
           setHistoryCount(state.history_count || 0);
+          if (state.history_process_count !== undefined) {
+            setHistoryProcessCount(state.history_process_count);
+          }
+          if (state.history_rpc_count !== undefined) {
+            setHistoryRpcCount(state.history_rpc_count);
+          }
         } catch {
           // outside tauri / mock mode
         }
@@ -172,16 +191,18 @@ export function useSpooferEvents() {
   const fetchGames = useCallback(async () => {
     try {
       setIsFetchingDatabase(true);
-      addLog('info', 'Fetching latest detectable applications from Discord API...');
+      addLog('info', 'Загрузка официальной базы игр Discord...');
       const res = await tauriApi.fetchGames();
-      setTotalDatabaseGames(res.win32);
+      setTotalDatabaseGames(res.total);
+      setProcessGamesCount(res.process_count);
+      setRpcGamesCount(res.rpc_count);
       addLog(
         'success',
-        `Database updated: ${res.win32.toLocaleString()} Windows games loaded (from ${res.total.toLocaleString()} total apps).`
+        `База обновлена: всего ${res.total.toLocaleString()} игр (${res.process_count.toLocaleString()} нативных процессов + ${res.rpc_count.toLocaleString()} Discord RPC).`
       );
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      addLog('error', `Failed to fetch Discord database: ${msg}`);
+      addLog('error', `Ошибка загрузки базы: ${msg}`);
     } finally {
       setIsFetchingDatabase(false);
     }
@@ -191,12 +212,46 @@ export function useSpooferEvents() {
     try {
       await tauriApi.clearHistory();
       setHistoryCount(0);
-      addLog('info', 'Spoofer history cleared.');
+      addLog('info', 'История эмулированных игр очищена.');
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      addLog('error', `Failed to clear history: ${msg}`);
+      addLog('error', `Ошибка очистки истории: ${msg}`);
     }
   }, [addLog]);
+
+  const exportHistory = useCallback(async () => {
+    try {
+      const json = await tauriApi.exportHistory();
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `mimic-history-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      addLog('success', 'История успешно экспортирована в файл JSON.');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      addLog('error', `Ошибка экспорта истории: ${msg}`);
+    }
+  }, [addLog]);
+
+  const importHistory = useCallback(
+    async (jsonData: string) => {
+      try {
+        const added = await tauriApi.importHistory(jsonData);
+        const state = await tauriApi.getSpooferState();
+        setHistoryCount(state.history_count);
+        addLog('success', `Импортировано ${added} новых записей в историю.`);
+        return added;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        addLog('error', `Ошибка импорта истории: ${msg}`);
+        throw e;
+      }
+    },
+    [addLog]
+  );
 
   return {
     status,
@@ -204,7 +259,11 @@ export function useSpooferEvents() {
     tickData,
     logs,
     totalDatabaseGames,
+    processGamesCount,
+    rpcGamesCount,
     historyCount,
+    historyProcessCount,
+    historyRpcCount,
     isFetchingDatabase,
     actions: {
       start,
@@ -214,6 +273,8 @@ export function useSpooferEvents() {
       fetchGames,
       clearLogs,
       clearHistory,
+      exportHistory,
+      importHistory,
       addLog,
     },
   };

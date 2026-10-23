@@ -6,7 +6,11 @@ interface DashboardViewProps {
   status: SpooferStatus;
   tickData: SpooferTickEvent;
   totalAvailableGames: number;
+  processGamesCount?: number;
+  rpcGamesCount?: number;
   historyCount: number;
+  historyProcessCount?: number;
+  historyRpcCount?: number;
   logs: SpooferLogEvent[];
   config: SpooferConfig;
   onConfigChange: (updater: (prev: SpooferConfig) => SpooferConfig) => void;
@@ -20,7 +24,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   status,
   tickData,
   totalAvailableGames,
+  processGamesCount,
+  rpcGamesCount,
   historyCount,
+  historyProcessCount,
+  historyRpcCount,
   logs,
   config,
   onConfigChange,
@@ -33,7 +41,32 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const isPaused = status === 'paused';
   const isIdle = status === 'idle' || status === 'finished' || status === 'error';
 
-  const totalTarget = tickData.total_games > 0 ? tickData.total_games : totalAvailableGames;
+  const currentModeTotal = React.useMemo(() => {
+    if (config.spoof_mode === 'process_only') return processGamesCount || 0;
+    if (config.spoof_mode === 'rpc_only') return rpcGamesCount || 0;
+    return totalAvailableGames;
+  }, [config.spoof_mode, processGamesCount, rpcGamesCount, totalAvailableGames]);
+
+  const currentModeHistory = React.useMemo(() => {
+    if (config.spoof_mode === 'process_only') return historyProcessCount ?? 0;
+    if (config.spoof_mode === 'rpc_only') return historyRpcCount ?? 0;
+    return historyCount ?? 0;
+  }, [config.spoof_mode, historyProcessCount, historyRpcCount, historyCount]);
+
+  const idleGamesRemaining = React.useMemo(() => {
+    if (!config.skip_previously_spoofed) return currentModeTotal;
+    return Math.max(0, currentModeTotal - currentModeHistory);
+  }, [currentModeTotal, config.skip_previously_spoofed, currentModeHistory]);
+
+  const idleEstimatedSecs = React.useMemo(() => {
+    if (idleGamesRemaining <= 0 || config.batch_size <= 0) return 0;
+    const batches = Math.ceil(idleGamesRemaining / config.batch_size);
+    return batches * config.hold_duration_secs;
+  }, [idleGamesRemaining, config.batch_size, config.hold_duration_secs]);
+
+  const totalTarget = (isRunning || isPaused) && tickData.total_games > 0
+    ? tickData.total_games
+    : (config.skip_previously_spoofed ? idleGamesRemaining : currentModeTotal);
   const currentDone = tickData.current_index;
   const progressPercent = totalTarget > 0 ? Math.min(100, Math.round((currentDone / totalTarget) * 100)) : 0;
 
@@ -94,8 +127,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         {/* Subtitle */}
         <div className="text-center text-xs text-neutral-400">
-          {currentDone} из {totalTarget} игр эмулировано
-          {historyCount > 0 && ` (${historyCount} в истории)`}
+          {isRunning || isPaused ? (
+            <>
+              {currentDone} из {totalTarget} игр эмулировано
+              {currentModeHistory > 0 && ` (${currentModeHistory} в истории)`}
+            </>
+          ) : (
+            <>
+              {currentModeTotal} игр в категории ({idleGamesRemaining} к запуску
+              {currentModeHistory > 0 && config.skip_previously_spoofed && `, ${currentModeHistory} уже пройдено`})
+            </>
+          )}
         </div>
       </div>
 
@@ -104,9 +146,71 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Left Card: Управление батчами */}
         <div className="bg-[#161722] border border-[#232535] rounded-xl p-4 flex flex-col justify-between shadow-sm min-h-0 overflow-y-auto">
           <div className="space-y-4">
-            <h2 className="text-sm font-semibold text-white">
-              Управление батчами
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-white">
+                Управление батчами
+              </h2>
+            </div>
+
+            {/* Selector: Источник / Тип игр */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-neutral-300">Какие игры запускать:</span>
+                <span className="font-mono text-[10px] text-discord-light font-semibold">
+                  {config.spoof_mode === 'rpc_only'
+                    ? 'Остальные (RPC / Консоли)'
+                    : config.spoof_mode === 'process_only'
+                    ? 'Только процессы (ОС .exe)'
+                    : 'Все игры (Гибридный режим)'}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-1">
+                <button
+                  type="button"
+                  disabled={!isIdle}
+                  onClick={() => onConfigChange((prev) => ({ ...prev, spoof_mode: 'hybrid' }))}
+                  className={`py-1.5 px-1.5 text-[11px] rounded border transition-all text-center flex flex-col items-center justify-center ${
+                    config.spoof_mode === 'hybrid'
+                      ? 'bg-[#5865F2] text-white border-[#5865F2] font-semibold shadow-sm'
+                      : 'bg-[#1b1c28] text-neutral-400 border-white/10 hover:text-white'
+                  }`}
+                  title="Все доступные игры (процессы + RPC)"
+                >
+                  <span>Все {totalAvailableGames > 0 ? `(${totalAvailableGames})` : ''}</span>
+                  <span className="text-[9px] opacity-75 font-mono">Гибрид</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={!isIdle}
+                  onClick={() => onConfigChange((prev) => ({ ...prev, spoof_mode: 'rpc_only' }))}
+                  className={`py-1.5 px-1.5 text-[11px] rounded border transition-all text-center flex flex-col items-center justify-center ${
+                    config.spoof_mode === 'rpc_only'
+                      ? 'bg-[#8b5cf6] text-white border-[#8b5cf6] font-semibold shadow-sm'
+                      : 'bg-[#1b1c28] text-neutral-400 border-white/10 hover:text-white'
+                  }`}
+                  title="Остальные игры без локального файла (консольные, мобильные, SDK)"
+                >
+                  <span className="text-[#e9d5ff]">Остальные {rpcGamesCount && rpcGamesCount > 0 ? `(${rpcGamesCount})` : '(RPC)'}</span>
+                  <span className="text-[9px] opacity-75 font-mono">Консоли / SDK</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={!isIdle}
+                  onClick={() => onConfigChange((prev) => ({ ...prev, spoof_mode: 'process_only' }))}
+                  className={`py-1.5 px-1.5 text-[11px] rounded border transition-all text-center flex flex-col items-center justify-center ${
+                    config.spoof_mode === 'process_only'
+                      ? 'bg-[#3b82f6] text-white border-[#3b82f6] font-semibold shadow-sm'
+                      : 'bg-[#1b1c28] text-neutral-400 border-white/10 hover:text-white'
+                  }`}
+                  title="Только классические процессы (.exe)"
+                >
+                  <span className="text-[#bfdbfe]">Только ОС {processGamesCount && processGamesCount > 0 ? `(${processGamesCount})` : '(.exe)'}</span>
+                  <span className="text-[9px] opacity-75 font-mono">Процессы</span>
+                </button>
+              </div>
+            </div>
 
             {/* Slider 1: Размер батча */}
             <div className="space-y-1.5">
@@ -249,7 +353,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="flex justify-between items-center">
               <span className="text-neutral-400">Оставшееся время:</span>
               <span className="font-mono font-medium text-neutral-300">
-                {isRunning || isPaused ? formatEtaRussian(tickData.estimated_remaining_secs) : '—'}
+                {isRunning || isPaused
+                  ? formatEtaRussian(tickData.estimated_remaining_secs)
+                  : `${formatEtaRussian(idleEstimatedSecs)} (расчёт)`}
               </span>
             </div>
           </div>
@@ -294,8 +400,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         }}
                       />
                     ) : (
-                      <div className="w-5 h-5 rounded bg-[#242738] flex items-center justify-center text-[#5865F2] flex-shrink-0 text-[10px] font-bold">
-                        🎮
+                      <div className="w-5 h-5 rounded bg-[#242738] flex items-center justify-center flex-shrink-0">
+                        <Gamepad2 className="w-3 h-3 text-[#5865F2]" />
                       </div>
                     )}
                     <div className="min-w-0 truncate">
@@ -303,7 +409,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         {game.name}
                       </span>
                       <span className="font-mono text-[11px] text-neutral-400 truncate">
-                        ({game.executable.split(/[\\/]/).pop()})
+                        {game.method === 'rpc' ? (
+                          <span className="text-[#a78bfa] font-semibold bg-[#a78bfa]/10 border border-[#a78bfa]/20 px-1 py-0.5 rounded text-[10px]">
+                            RPC
+                          </span>
+                        ) : (
+                          `(${game.executable ? game.executable.split(/[\\/]/).pop() : 'exe'})`
+                        )}
                       </span>
                     </div>
                   </div>

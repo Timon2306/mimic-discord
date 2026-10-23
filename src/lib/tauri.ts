@@ -2,12 +2,13 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import type {
   SpooferConfig,
-  SpooferStatus,
   SpooferTickEvent,
   SpooferLogEvent,
   SpooferStatusEvent,
   FetchProgressEvent,
   SpoofableGameItem,
+  FetchGamesResponse,
+  SpooferStateResponse,
 } from '@/types/spoofer';
 
 export const tauriApi = {
@@ -28,7 +29,7 @@ export const tauriApi = {
     return invoke('stop_spoofer');
   },
 
-  fetchGames: (): Promise<{ total: number; win32: number }> => {
+  fetchGames: (): Promise<FetchGamesResponse> => {
     return invoke('fetch_games');
   },
 
@@ -44,7 +45,15 @@ export const tauriApi = {
     return invoke('clear_history');
   },
 
-  getSpooferState: (): Promise<{ status: SpooferStatus; win32_count: number; history_count: number }> => {
+  exportHistory: (): Promise<string> => {
+    return invoke('export_history');
+  },
+
+  importHistory: (jsonData: string): Promise<number> => {
+    return invoke('import_history', { jsonData });
+  },
+
+  getSpooferState: (): Promise<SpooferStateResponse> => {
     return invoke('get_spoofer_state');
   },
 

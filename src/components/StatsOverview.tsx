@@ -8,12 +8,16 @@ interface StatsOverviewProps {
   tickData: SpooferTickEvent;
   totalAvailableGames: number;
   status: SpooferStatus;
+  processGamesCount?: number;
+  rpcGamesCount?: number;
 }
 
 export const StatsOverview: React.FC<StatsOverviewProps> = ({
   tickData,
   totalAvailableGames,
   status,
+  processGamesCount,
+  rpcGamesCount,
 }) => {
   const targetTotal = tickData.total_games > 0 ? tickData.total_games : totalAvailableGames;
   const progressPercent =
@@ -24,7 +28,7 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({
       {/* 1. Processed Games */}
       <Card className="flex flex-col justify-between border-white/5 bg-surface-200/60 p-3.5">
         <div className="flex items-center justify-between text-neutral-400">
-          <span className="text-xs font-medium">Processed</span>
+          <span className="text-xs font-medium">Прогресс базы</span>
           <Activity className="w-4 h-4 text-discord-light" />
         </div>
         <div className="mt-2">
@@ -37,7 +41,12 @@ export const StatsOverview: React.FC<StatsOverviewProps> = ({
             </span>
           </div>
           <div className="text-[11px] font-mono text-discord-light mt-0.5">
-            {progressPercent.toFixed(1)}% completed
+            {progressPercent.toFixed(1)}% выполнено
+            {processGamesCount !== undefined && rpcGamesCount !== undefined && (
+              <span className="text-neutral-500 text-[10px] ml-1">
+                ({processGamesCount.toLocaleString()} exe + {rpcGamesCount.toLocaleString()} rpc)
+              </span>
+            )}
           </div>
         </div>
       </Card>

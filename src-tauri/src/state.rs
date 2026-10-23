@@ -14,13 +14,23 @@ pub enum SpooferStatus {
     Error,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum SpoofMode {
+    #[default]
+    Hybrid,
+    ProcessOnly,
+    RpcOnly,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ActiveGameInfo {
     pub id: String,
     pub name: String,
-    pub executable: String,
+    pub executable: Option<String>,
     pub pid: Option<u32>,
     pub icon_hash: Option<String>,
+    pub method: String, // "process" | "rpc"
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -49,8 +59,25 @@ pub struct SpooferStatusEvent {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FetchProgressEvent {
     pub total_fetched: usize,
-    pub win32_count: usize,
+    pub process_count: usize,
+    pub rpc_count: usize,
+    #[serde(default)]
+    pub history_process_count: usize,
+    #[serde(default)]
+    pub history_rpc_count: usize,
     pub is_loading: bool,
+}
+
+fn default_true() -> bool {
+    true
+}
+
+fn default_cooldown_batches() -> usize {
+    25
+}
+
+fn default_cooldown_seconds() -> u64 {
+    30
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -61,6 +88,16 @@ pub struct SpooferConfig {
     pub start_offset: Option<usize>,
     #[serde(default)]
     pub skip_previously_spoofed: bool,
+    #[serde(default)]
+    pub spoof_mode: SpoofMode,
+    #[serde(default = "default_true")]
+    pub cooldown_enabled: bool,
+    #[serde(default = "default_cooldown_batches")]
+    pub cooldown_every_n_batches: usize,
+    #[serde(default = "default_cooldown_seconds")]
+    pub cooldown_seconds: u64,
+    #[serde(default)]
+    pub jitter_enabled: bool,
 }
 
 pub struct AppState {
