@@ -2,7 +2,7 @@
 name = "mimic"
 version = "1.0.1"
 description = "Discord Game Detection Booster"
-authors = ["mimic"]
+authors = ["Timon2306"]
 license = "MIT"
 edition = "2021"
 
