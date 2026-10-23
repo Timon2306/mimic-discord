@@ -413,12 +413,12 @@ pub async fn run_spoofer(
                 #[cfg(unix)]
                 {
                     use std::os::unix::process::CommandExt;
-                    cmd.pre_exec(|| {
-                        unsafe {
+                    unsafe {
+                        cmd.pre_exec(|| {
                             libc::prctl(1, libc::SIGKILL, 0, 0, 0);
-                        }
-                        Ok(())
-                    });
+                            Ok(())
+                        });
+                    }
                 }
 
                 match cmd.spawn() {
