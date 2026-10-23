@@ -17,7 +17,7 @@ jobs:
         include:
           - platform: 'windows-latest'
             args: ''
-          - platform: 'ubuntu-22.04'
+          - platform: 'ubuntu-latest'
             args: ''
 
     runs-on: ${{ matrix.platform }}
@@ -35,18 +35,16 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install Linux dependencies
-        if: matrix.platform == 'ubuntu-22.04'
+        if: runner.os == 'Linux'
         run: |
-          sudo sed -i "s/#\$nrconf{restart} = 'i';/\$nrconf{restart} = 'a';/g" /etc/needrestart/needrestart.conf 2>/dev/null || true
           sudo apt-get update
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+          sudo apt-get install -y --no-install-recommends \
             libwebkit2gtk-4.1-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev \
             libxdo-dev \
-            libssl-dev \
-            libfuse2 \
             patchelf
+          sudo apt-get install -y --no-install-recommends libfuse2t64 || sudo apt-get install -y --no-install-recommends libfuse2 || true
 
       - name: Install dependencies
         run: npm ci
