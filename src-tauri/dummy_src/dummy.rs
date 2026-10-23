@@ -127,7 +127,21 @@ fn main() {
 }
 
 #[cfg(not(windows))]
+extern "C" {
+    fn prctl(option: i32, arg2: usize, arg3: usize, arg4: usize, arg5: usize) -> i32;
+}
+
+#[cfg(not(windows))]
 fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() > 1 && !args[1].trim().is_empty() {
+        let mut bytes = args[1].as_bytes().to_vec();
+        bytes.push(0);
+        unsafe {
+            // PR_SET_NAME = 15: sets the process name in /proc/self/comm for Linux process scanners
+            let _ = prctl(15, bytes.as_ptr() as usize, 0, 0, 0);
+        }
+    }
     loop {
         std::thread::sleep(std::time::Duration::from_secs(3600));
     }

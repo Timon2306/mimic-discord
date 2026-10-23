@@ -1,7 +1,7 @@
 # mimic
 
 <div align="center">
-  <img src="app-icon.svg" width="100" height="100" alt="mimic logo" />
+  <img src="mimic.png" width="128" height="128" alt="mimic logo" />
   <p><strong>Minimalist, high-performance desktop Discord game activity spoofer & badge booster</strong></p>
   <p>Boost your Discord profile <b>Game Variety (Универсал)</b> and <b>Game Time (Время в играх)</b> badges natively.</p>
 </div>

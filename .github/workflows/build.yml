@@ -3,19 +3,19 @@ name: Build & Release
 on:
   push:
     branches: [main, master]
-  pull_request:
-    branches: [main, master]
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 jobs:
   build:
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
         include:
           - platform: 'windows-latest'
-            args: ''
-          - platform: 'macos-latest'
             args: ''
           - platform: 'ubuntu-22.04'
             args: ''
@@ -53,6 +53,6 @@ jobs:
         with:
           tagName: v__VERSION__
           releaseName: 'mimic v__VERSION__'
-          releaseBody: 'Release of mimic desktop game booster'
-          releaseDraft: true
+          releaseBody: 'Release of mimic Discord game badge booster'
+          releaseDraft: false
           prerelease: false
