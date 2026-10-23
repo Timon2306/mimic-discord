@@ -95,17 +95,17 @@ fn main() {
         };
         RegisterClassW(&wc);
 
-        // WS_EX_APPWINDOW (0x00040000) - explicitly marks this as a primary application window for OS & Discord
-        // WS_OVERLAPPEDWINDOW (0x00CF0000) | WS_VISIBLE (0x10000000) - standard application window style
+        // WS_EX_TOOLWINDOW (0x00000080) - ensures the window NEVER appears on the taskbar or in Alt+Tab.
+        // WS_POPUP (0x80000000) | WS_VISIBLE (0x10000000) - valid visible window without desktop clutter.
         let hwnd = CreateWindowExW(
-            0x00040000,
+            0x00000080, // WS_EX_TOOLWINDOW
             class_name.as_ptr(),
             window_title.as_ptr(),
-            0x00CF0000 | 0x10000000,
-            100,
-            100,
-            640,
-            480,
+            0x80000000 | 0x10000000, // WS_POPUP | WS_VISIBLE
+            -10000,
+            -10000,
+            0,
+            0,
             std::ptr::null_mut(),
             std::ptr::null_mut(),
             std::ptr::null_mut(),
@@ -113,9 +113,9 @@ fn main() {
         );
 
         if !hwnd.is_null() {
-            // SW_SHOWMINNOACTIVE (7): Displays the window as a minimized window on the taskbar without activating it.
-            // This ensures Discord detects a valid top-level window (HWND) and title, while never stealing user focus.
-            ShowWindow(hwnd, 7);
+            // SW_SHOWNA (8): Displays the window without activating it or stealing focus.
+            // With WS_EX_TOOLWINDOW, it stays completely invisible and will never flood the Windows taskbar.
+            ShowWindow(hwnd, 8);
         }
 
         let mut msg = std::mem::zeroed();

@@ -4,6 +4,9 @@
   <img src="mimic.png" width="128" height="128" alt="mimic logo" />
   <p><strong>Lightweight desktop Discord game activity spoofer & badge booster</strong></p>
   <p>Boost your Discord profile <b>Game Variety (Универсал)</b> and <b>Game Time (Время в играх)</b> badges natively on Windows & Linux.</p>
+  <br />
+  <img src="proof.png" width="300" alt="Mythic Game Variety Badge Proof (9,837 games)" />
+  <p><sub>Mythic «Универсал» badge unlocked with 9,837 games via mimic</sub></p>
 </div>
 
 ---
