@@ -14,7 +14,7 @@
 ## ✨ Features
 
 - **🏆 Game Variety Badge Booster**: Rapidly cycles through verified Discord titles in parallel batches (e.g. 8 games with 15s hold). Tested and proven to unlock the Mythic **Универсал** badge (9,800+ games).
-- **⏱️ Game Time Multiplier**: Running $N$ games concurrently multiplies your Discord gameplay tracking hours ($8\text{ games} \times 5\text{ hours} = 40\text{ hours}$ credited).
+- **⏱️ Game Time Multiplier**: Running multiple games concurrently multiplies your Discord gameplay tracking hours (e.g. 8 games × 5 hours = 40 hours credited).
 - **🐧 Multiplatform Support**: Runs natively on both **Windows** (Win32 dummy process window emulation) and **Linux** (`prctl`/`/proc/self/comm` emulation).
 - **🛡️ 100% Safe & Native**: Zero token extraction, zero memory injection, zero Discord client modifications. Discord naturally detects running games via official OS process inspection APIs.
 - **⚡ Background Process Emulation**: Lightweight dummy engine creating legitimate application processes without stealing focus or interrupting your work.
@@ -35,7 +35,7 @@ Discord tracks two badges for desktop gamers:
 
 2. **Game Time (Время в играх)**:
    - Tracks total playtime hours.
-   - Running parallel dummy processes multiplies tracked hours ($N\times$ boost).
+   - Running parallel dummy processes multiplies tracked hours (e.g. 8x boost).
    - Recommended setting: **Batch Size: 8–20**, **Hold Duration: 30–60 min**.
 
 ---
