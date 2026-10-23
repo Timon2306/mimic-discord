@@ -59,8 +59,8 @@ Discord tracks two badges for desktop gamers:
 
 ```bash
 # Clone the repository
-git clone https://github.com/Timon2306/mimic.git
-cd mimic
+git clone https://github.com/Timon2306/mimic-discord.git
+cd mimic-discord
 
 # Install dependencies
 npm install
