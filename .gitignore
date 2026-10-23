@@ -1,0 +1,41 @@
+# Rust & Cargo
+src-tauri/target/
+src-tauri/**/Cargo.lock.temp
+**/*.rs.bk
+
+# Node & Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+.npm/
+
+# Tauri build artifacts
+src-tauri/gen/
+*.msi
+*.exe
+*.app
+*.pdb
+!src-tauri/dummy_src/*.rs
+
+# Temporary spoofer runtime directories
+discord_game_spoofer/
+mimic_spoofer*/
+
+# Environment and sensitive keys
+.env
+.env.*
+!.env.example
+
+# IDE and OS files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+Thumbs.db
+.DS_Store
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
