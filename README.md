@@ -2,45 +2,45 @@
 
 <div align="center">
   <img src="mimic.png" width="128" height="128" alt="mimic logo" />
-  <p><strong>Minimalist, high-performance desktop Discord game activity spoofer & badge booster</strong></p>
-  <p>Boost your Discord profile <b>Game Variety (Универсал)</b> and <b>Game Time (Время в играх)</b> badges natively.</p>
+  <p><strong>Lightweight desktop Discord game activity spoofer & badge booster</strong></p>
+  <p>Boost your Discord profile <b>Game Variety (Универсал)</b> and <b>Game Time (Время в играх)</b> badges natively on Windows & Linux.</p>
 </div>
 
 ---
 
 ## ✨ Features
 
-- **🏆 Mythic Game Variety Badge Booster**: Rapidly cycle through thousands of verified Discord titles in parallel batches (8 games @ 15s hold). Proven to unlock the Mythic **Универсал** badge (9,800+ games).
-- **⏱️ Game Time Multiplier (Nx Boost)**: Running $N$ games concurrently multiplies your Discord gameplay tracking hours ($8\text{ games} \times 5\text{ hours} = 40\text{ hours}$ credited).
-- **🛡️ 100% Safe & Native**: Zero user token extraction, zero memory injection, zero Discord client modifications. Discord naturally detects running games via official OS process & window inspection APIs.
-- **⚡ Smart Window Emulation**: Embedded lightweight Win32 dummy engine (`dummy.exe`) creating legitimate top-level application windows (`WS_EX_APPWINDOW`) in minimized state (`SW_SHOWMINNOACTIVE`) without interrupting your work or stealing focus.
+- **🏆 Game Variety Badge Booster**: Rapidly cycles through verified Discord titles in parallel batches (e.g. 8 games with 15s hold). Tested and proven to unlock the Mythic **Универсал** badge (9,800+ games).
+- **⏱️ Game Time Multiplier**: Running $N$ games concurrently multiplies your Discord gameplay tracking hours ($8\text{ games} \times 5\text{ hours} = 40\text{ hours}$ credited).
+- **🐧 Multiplatform Support**: Runs natively on both **Windows** (Win32 dummy process window emulation) and **Linux** (`prctl`/`/proc/self/comm` emulation).
+- **🛡️ 100% Safe & Native**: Zero token extraction, zero memory injection, zero Discord client modifications. Discord naturally detects running games via official OS process inspection APIs.
+- **⚡ Background Process Emulation**: Lightweight dummy engine creating legitimate application processes without stealing focus or interrupting your work.
 - **🧹 Zero Residual Disk Footprint**: Instant per-batch cleanup ensuring temporary files are immediately removed from disk, preventing Discord settings cache bloat.
 - **💾 Smart History & State**: Persistent cache (`history.json`) skips already spoofed games across sessions so you never repeat entries.
-- **💻 Cyberpunk Dark UI**: Sleek, non-straining matte dark interface built with Tailwind CSS, Lucide Icons, and real-time terminal activity logs.
 
 ---
 
 ## 🎮 How It Works
 
-Discord tracks two beta badges for desktop gamers:
+Discord tracks two badges for desktop gamers:
 
 1. **Game Variety (Разные игры — Универсал)**:
    - Tracks unique PC titles played over time.
-   - Mimic cycles through Discord's official database of 10,000+ detectable applications.
+   - Cycles through Discord's official database of 10,000+ detectable applications.
    - Recommended setting: **Batch Size: 8**, **Hold Duration: 15s**.
-   - *Note: Discord servers process telemetry updates in batch intervals (up to 24h delay).*
+   - *Note: Discord servers process badge telemetry in batch intervals (up to 24h delay).*
 
-2. **Game Time (Время в играх — Dedicated)**:
+2. **Game Time (Время в играх)**:
    - Tracks total playtime hours.
-   - Running parallel dummy processes allows **multiplied hours accumulation** ($N\times$ boost).
+   - Running parallel dummy processes multiplies tracked hours ($N\times$ boost).
    - Recommended setting: **Batch Size: 8–20**, **Hold Duration: 30–60 min**.
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Backend**: Rust, [Tauri v2](https://v2.tauri.app/), Tokio, Reqwest, Windows API (`windows-sys`)
-- **Frontend**: React 18 / 19, TypeScript, Vite, Tailwind CSS, Lucide Icons
+- **Backend**: Rust, [Tauri v2](https://v2.tauri.app/), Tokio, Reqwest, Windows API (`windows-sys`), Linux (`libc`)
+- **Frontend**: React, TypeScript, Vite, Tailwind CSS
 
 ---
 
@@ -69,12 +69,13 @@ npm run tauri dev
 ### Production Build
 
 ```bash
-# Build standalone Windows installer & executable
+# Build standalone installer & executable
 npm run tauri build
 ```
 
-The compiled standalone executable will be located in:
-`src-tauri/target/release/mimic.exe`
+Compiled standalone binaries:
+- Windows: `src-tauri/target/release/bundle/nsis/` & `src-tauri/target/release/mimic.exe`
+- Linux: `src-tauri/target/release/bundle/appimage/` & `src-tauri/target/release/bundle/deb/`
 
 ---
 

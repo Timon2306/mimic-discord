@@ -50,16 +50,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-3 h-full overflow-y-auto pr-1">
+    <div className="flex flex-col gap-3 h-full overflow-hidden pr-1">
       {/* 1. TOP STATUS CARD */}
-      <div className="bg-[#161722] border border-[#232535] rounded-xl p-4 shadow-sm flex flex-col gap-2.5">
+      <div className="bg-[#161722] border border-[#232535] rounded-xl p-4 shadow-sm flex flex-col gap-2.5 flex-shrink-0">
         <div className="flex items-center gap-2 text-sm font-semibold">
           <span className="text-white">СТАТУС:</span>
           {isRunning && (
             <span className="text-emerald-400 font-bold flex items-center gap-1.5">
               АКТИВНО{' '}
               <span className="text-xs font-normal text-neutral-400">
-                (Запущено {tickData.active_batch.length} фейковых процессов)
+                (Запущено {tickData.active_batch.length} процессов)
               </span>
             </span>
           )}
@@ -100,9 +100,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* 2. MIDDLE TWO-COLUMN SECTION */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 flex-1 min-h-[260px]">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 flex-1 min-h-0 overflow-hidden">
         {/* Left Card: Управление батчами */}
-        <div className="bg-[#161722] border border-[#232535] rounded-xl p-4 flex flex-col justify-between shadow-sm">
+        <div className="bg-[#161722] border border-[#232535] rounded-xl p-4 flex flex-col justify-between shadow-sm min-h-0 overflow-y-auto">
           <div className="space-y-4">
             <h2 className="text-sm font-semibold text-white">
               Управление батчами
@@ -114,11 +114,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <span className="text-neutral-300">
                   Параллельных процессов:
                 </span>
-                <span className="font-mono font-bold text-white flex items-center gap-1.5">
-                  <span className="text-[#5865F2]">{config.batch_size}</span>
-                  <span className="text-[11px] text-amber-400 font-semibold bg-amber-400/10 px-1.5 py-0.5 rounded border border-amber-400/20">
-                    ⚡ {config.batch_size}x буст часов
-                  </span>
+                <span className="font-mono font-bold text-[#5865F2]">
+                  {config.batch_size}
                 </span>
               </div>
               <input
@@ -135,9 +132,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 }
                 className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-[#242636] accent-[#5865F2] disabled:opacity-50"
               />
-              <div className="text-[10px] text-neutral-400">
-                За 1 реальный час в значок «Время в играх» засчитывается {config.batch_size} ч.
-              </div>
             </div>
 
             {/* Slider 2: Время удержания */}
@@ -197,9 +191,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 }
                 className="w-full h-1.5 rounded-lg appearance-none cursor-pointer bg-[#242636] accent-[#5865F2] disabled:opacity-50 mt-1"
               />
-              <div className="text-[10px] text-neutral-400">
-                15с для быстрой ротации значка «Универсал», 5–60 мин для значка «Время в играх».
-              </div>
             </div>
 
             {/* Buttons Row */}
@@ -265,8 +256,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* Right Card: Список запущенных фейковых процессов */}
-        <div className="bg-[#161722] border border-[#232535] rounded-xl p-4 flex flex-col shadow-sm">
-          <div className="flex items-center justify-between pb-2 border-b border-white/5">
+        <div className="bg-[#161722] border border-[#232535] rounded-xl p-4 flex flex-col shadow-sm min-h-0 overflow-hidden">
+          <div className="flex items-center justify-between pb-2 border-b border-white/5 flex-shrink-0">
             <h2 className="text-sm font-semibold text-white">
               Активные процессы
             </h2>
@@ -275,7 +266,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </span>
           </div>
 
-          <div className="flex-1 overflow-y-auto pr-1 mt-2 space-y-2">
+          <div className="flex-1 overflow-y-auto pr-1 mt-2 space-y-1.5 min-h-0">
             {tickData.active_batch.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center text-neutral-500 text-xs p-4">
                 <Gamepad2 className="w-8 h-8 opacity-25 mb-1.5" />
@@ -332,7 +323,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* 3. BOTTOM LOGS CONSOLE */}
-      <div className="bg-[#101117] border border-[#1d1f2b] rounded-lg p-3 h-36 flex flex-col font-mono text-[11px] shadow-inner">
+      <div className="bg-[#101117] border border-[#1d1f2b] rounded-lg p-3 h-36 flex flex-col font-mono text-[11px] shadow-inner flex-shrink-0">
         <div className="flex-1 overflow-y-auto space-y-1 pr-1 text-[#d1d5db]">
           {logs.length === 0 ? (
             <div className="text-neutral-500 italic">Ожидание событий...</div>

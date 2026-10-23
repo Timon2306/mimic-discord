@@ -189,7 +189,7 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
         {/* Batch Size Slider */}
         <div className="space-y-1.5 bg-surface-300/40 p-3 rounded-lg border border-border">
           <Slider
-            label="Параллельных процессов (Множитель времени)"
+            label="Параллельных процессов"
             min={1}
             max={20}
             step={1}
@@ -198,10 +198,6 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({
             disabled={!isIdle}
             onChange={setBatchSize}
           />
-          <div className="flex items-center gap-1.5 text-[11px] text-amber-400 pt-1">
-            <Info className="w-3 h-3 text-amber-400 flex-shrink-0" />
-            <span>⚡ Множитель: {batchSize} игр × 1 час = {batchSize} часов в значке времени!</span>
-          </div>
         </div>
 
         {/* Hold Duration Slider & Presets */}
