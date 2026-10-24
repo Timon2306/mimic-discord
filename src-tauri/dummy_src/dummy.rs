@@ -96,12 +96,14 @@ fn main() {
         RegisterClassW(&wc);
 
         // WS_EX_TOOLWINDOW (0x00000080) - ensures the window NEVER appears on the taskbar or in Alt+Tab.
-        // WS_POPUP (0x80000000) | WS_VISIBLE (0x10000000) - valid visible window without desktop clutter.
+        // WS_EX_NOACTIVATE (0x08000000) - ensures the window NEVER activates or steals focus from active apps.
+        // WS_POPUP (0x80000000) - window without border or caption.
+        // Note: Do NOT use WS_VISIBLE in CreateWindowEx, as WS_VISIBLE causes Windows to activate the window immediately!
         let hwnd = CreateWindowExW(
-            0x00000080, // WS_EX_TOOLWINDOW
+            0x00000080 | 0x08000000, // WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE
             class_name.as_ptr(),
             window_title.as_ptr(),
-            0x80000000 | 0x10000000, // WS_POPUP | WS_VISIBLE
+            0x80000000, // WS_POPUP (without WS_VISIBLE)
             -10000,
             -10000,
             0,
@@ -113,8 +115,7 @@ fn main() {
         );
 
         if !hwnd.is_null() {
-            // SW_SHOWNA (8): Displays the window without activating it or stealing focus.
-            // With WS_EX_TOOLWINDOW, it stays completely invisible and will never flood the Windows taskbar.
+            // SW_SHOWNA (8): Displays the window in its current size and position without activating it.
             ShowWindow(hwnd, 8);
         }
 

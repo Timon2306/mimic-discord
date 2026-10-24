@@ -410,6 +410,12 @@ pub async fn run_spoofer(
                     }
                 }
 
+                #[cfg(windows)]
+                {
+                    use std::os::windows::process::CommandExt;
+                    cmd.creation_flags(0x00004000);
+                }
+
                 #[cfg(unix)]
                 {
                     use std::os::unix::process::CommandExt;
@@ -485,6 +491,8 @@ pub async fn run_spoofer(
                     }
                 }
             }
+
+            tokio::time::sleep(Duration::from_millis(40)).await;
         }
 
         // Calculate holding duration with optional organic jitter
@@ -616,6 +624,11 @@ pub async fn run_spoofer(
         }
 
         processed_count += current_batch.len();
+
+        // Brief breather between batches to let the OS process table and Discord process watcher settle cleanly
+        if !cancel_flag.load(Ordering::SeqCst) && processed_count < target_count && !pool.is_empty() {
+            tokio::time::sleep(Duration::from_millis(500)).await;
+        }
 
         let elapsed_secs = start_time.elapsed().as_secs();
         let games_done = processed_count;
