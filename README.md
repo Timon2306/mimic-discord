@@ -82,6 +82,15 @@ Compiled standalone binaries:
 
 ---
 
+## ⚠️ Disclaimer & Known Limitations
+
+- **Badge results are not guaranteed.** Discord decides what counts, so going past the verified numbers below may not progress the badge any further.
+- **Tested on Windows only**, with Discord games tracked up to **~10,000 games in the badge** (Mythic «Универсал»).
+- A target of **24,000 games is unverified** — it may work, may be throttled, or may have no effect at all.
+- Game activity spoofing is not officially supported by Discord. Use it at your own risk.
+
+---
+
 ## 📄 License
 
 This project is licensed under the [MIT License](LICENSE).
