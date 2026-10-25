@@ -267,6 +267,59 @@ pub async fn get_games_list(state: State<'_, AppState>) -> Result<Vec<crate::dis
     Ok(db.clone())
 }
 
+/// Opens a link in the system default browser. Only GitHub https links are allowed.
+#[tauri::command]
+pub fn open_external_url(url: String) -> Result<(), String> {
+    if !url.starts_with("https://github.com/") || url.chars().any(char::is_whitespace) {
+        return Err("Blocked external URL".to_string());
+    }
+    open_in_browser(&url)
+}
+
+#[cfg(target_os = "windows")]
+fn open_in_browser(url: &str) -> Result<(), String> {
+    use windows_sys::Win32::UI::Shell::ShellExecuteW;
+    use windows_sys::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+
+    let operation: Vec<u16> = "open\0".encode_utf16().collect();
+    let wide_url: Vec<u16> = url.encode_utf16().chain(std::iter::once(0)).collect();
+
+    let result = unsafe {
+        ShellExecuteW(
+            std::ptr::null_mut(),
+            operation.as_ptr(),
+            wide_url.as_ptr(),
+            std::ptr::null(),
+            std::ptr::null(),
+            SW_SHOWNORMAL,
+        )
+    };
+
+    let code = result as isize;
+    if code <= 32 {
+        return Err(format!("Failed to open browser (ShellExecute code {})", code));
+    }
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn open_in_browser(url: &str) -> Result<(), String> {
+    std::process::Command::new("open")
+        .arg(url)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
+#[cfg(all(not(windows), not(target_os = "macos")))]
+fn open_in_browser(url: &str) -> Result<(), String> {
+    std::process::Command::new("xdg-open")
+        .arg(url)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 pub fn clear_history() -> Result<(), String> {
     clear_history_fs()

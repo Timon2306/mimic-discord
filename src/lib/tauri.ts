@@ -11,6 +11,9 @@ import type {
   SpooferStateResponse,
 } from '@/types/spoofer';
 
+const isTauriRuntime = (): boolean =>
+  typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+
 export const tauriApi = {
   // Commands
   startSpoofer: (config: SpooferConfig): Promise<void> => {
@@ -55,6 +58,15 @@ export const tauriApi = {
 
   getSpooferState: (): Promise<SpooferStateResponse> => {
     return invoke('get_spoofer_state');
+  },
+
+  // Opens a GitHub link in the system default browser
+  openExternalUrl: async (url: string): Promise<void> => {
+    if (isTauriRuntime()) {
+      await invoke('open_external_url', { url });
+      return;
+    }
+    window.open(url, '_blank', 'noopener,noreferrer');
   },
 
   // Event Listeners

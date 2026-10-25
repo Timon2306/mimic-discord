@@ -4,8 +4,10 @@ import { DashboardView } from '@/components/DashboardView';
 import { DatabaseView } from '@/components/DatabaseView';
 import { ConsoleView } from '@/components/ConsoleView';
 import { SettingsView } from '@/components/SettingsView';
+import { GithubStarDialog } from '@/components/GithubStarDialog';
 import { useDiscordStatus } from '@/hooks/useDiscordStatus';
 import { useSpooferEvents } from '@/hooks/useSpooferEvents';
+import { useStarPrompt } from '@/hooks/useStarPrompt';
 import type { SpooferConfig } from '@/types/spoofer';
 
 export const App: React.FC = () => {
@@ -41,6 +43,9 @@ export const App: React.FC = () => {
     isFetchingDatabase,
     actions,
   } = useSpooferEvents();
+
+  // "Star us on GitHub" dialog — appears once the threshold of spoofed games is reached
+  const starPrompt = useStarPrompt(historyCount);
 
   // Load database on start if empty
   useEffect(() => {
@@ -115,6 +120,14 @@ export const App: React.FC = () => {
           )}
         </div>
       </main>
+
+      <GithubStarDialog
+        open={starPrompt.isOpen}
+        gamesCount={starPrompt.gamesCount}
+        onOpenRepo={starPrompt.openRepo}
+        onAccept={starPrompt.accept}
+        onDecline={starPrompt.decline}
+      />
     </div>
   );
 };

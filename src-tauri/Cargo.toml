@@ -1,6 +1,6 @@
 [package]
 name = "mimic"
-version = "1.1.1"
+version = "1.1.2"
 description = "Discord Game Detection Booster"
 authors = ["Timon2306"]
 license = "MIT"
@@ -26,7 +26,9 @@ windows-sys = { version = "0.59", features = [
     "Win32_Foundation",
     "Win32_System_Threading",
     "Win32_System_JobObjects",
-    "Win32_Security"
+    "Win32_Security",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging"
 ] }
 
 [target.'cfg(unix)'.dependencies]

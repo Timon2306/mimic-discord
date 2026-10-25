@@ -23,6 +23,7 @@ pub fn run() {
             commands::clear_history,
             commands::export_history,
             commands::import_history,
+            commands::open_external_url,
         ])
         .run(tauri::generate_context!())
         .expect("error while running mimic desktop application");
