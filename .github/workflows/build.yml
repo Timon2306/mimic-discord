@@ -53,6 +53,8 @@ jobs:
       - name: Build Frontend
         run: npm run build
 
+      # Produces the installer (nsis) and the raw release exe on Windows,
+      # the AppImage and the .deb on Linux.
       - name: Build Tauri App
         uses: tauri-apps/tauri-action@v0
         env:
@@ -61,6 +63,50 @@ jobs:
         with:
           tagName: v__VERSION__
           releaseName: 'mimic v__VERSION__'
-          releaseBody: 'Release of mimic Discord game badge booster'
+          releaseBody: |
+            **mimic v__VERSION__**
+
+            **Windows**
+            - `mimic___VERSION___x64-setup.exe` — installer (Start Menu + desktop shortcut)
+            - `mimic___VERSION___x64_portable.exe` — portable single exe, just run it, no installation
+
+            **Linux**
+            - `mimic___VERSION___amd64.AppImage` — portable, `chmod +x` and run
+            - `mimic___VERSION___amd64.deb` — Debian/Ubuntu package
+
+            Linux limitation: Discord's database has native executables for only 8 games on Linux, so native mode cannot go past them. See the README for details.
           releaseDraft: false
           prerelease: false
+
+      # The portable build is the same binary the installer wraps, so it is copied
+      # out of target/release under a release-friendly name before attaching it.
+      - name: Prepare portable Windows exe
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $version = (Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).version
+          $source = 'src-tauri/target/release/mimic.exe'
+          if (-not (Test-Path $source)) { throw "Release exe not found at $source" }
+          $asset = "mimic_${version}_x64_portable.exe"
+          Copy-Item $source $asset -Force
+          "PORTABLE_ASSET=$asset" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "Prepared $asset ($((Get-Item $asset).Length) bytes)"
+
+      - name: Attach portable exe to release
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          $version = (Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).version
+          $tag = "v$version"
+          # tauri-action creates the release itself, so give it a moment to settle.
+          for ($attempt = 1; $attempt -le 12; $attempt++) {
+            gh release view $tag *> $null
+            if ($LASTEXITCODE -eq 0) { break }
+            if ($attempt -eq 12) { throw "Release $tag was not found, cannot attach $env:PORTABLE_ASSET" }
+            Start-Sleep -Seconds 5
+          }
+          gh release upload $tag $env:PORTABLE_ASSET --clobber
+          Write-Host "Uploaded $env:PORTABLE_ASSET to $tag"

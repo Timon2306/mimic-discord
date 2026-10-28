@@ -15,7 +15,7 @@
 
 - **🏆 Game Variety Badge Booster**: Rapidly cycles through verified Discord titles in parallel batches (e.g. 8 games with 15s hold). Tested and proven to unlock the Mythic **Универсал** badge (9,800+ games).
 - **⏱️ Game Time Multiplier**: Running multiple games concurrently multiplies your Discord gameplay tracking hours (e.g. 8 games × 5 hours = 40 hours credited).
-- **🐧 Multiplatform Support**: Runs natively on both **Windows** (Win32 dummy process window emulation) and **Linux** (`prctl`/`/proc/self/comm` emulation).
+- **🐧 Multiplatform Support**: Runs natively on both **Windows** (Win32 dummy process window emulation) and **Linux** (`prctl`/`/proc/self/comm` emulation). Note: Discord's database is heavily Windows-oriented — on Linux only **8** games have a native executable, see [Known Limitations](#-disclaimer--known-limitations).
 - **🛡️ 100% Safe & Native**: Zero token extraction, zero memory injection, zero Discord client modifications. Discord naturally detects running games via official OS process inspection APIs.
 - **⚡ Background Process Emulation**: Lightweight dummy engine creating legitimate application processes without stealing focus or interrupting your work.
 - **🧹 Zero Residual Disk Footprint**: Instant per-batch cleanup ensuring temporary files are immediately removed from disk, preventing Discord settings cache bloat.
@@ -80,12 +80,26 @@ Compiled standalone binaries:
 - Windows: `src-tauri/target/release/bundle/nsis/` & `src-tauri/target/release/mimic.exe`
 - Linux: `src-tauri/target/release/bundle/appimage/` & `src-tauri/target/release/bundle/deb/`
 
+### Release assets
+
+Every release ships four files:
+
+| Platform | File | Notes |
+| --- | --- | --- |
+| Windows | `mimic_<version>_x64-setup.exe` | NSIS installer (Start Menu + desktop shortcut) |
+| Windows | `mimic_<version>_x64_portable.exe` | Single portable exe — download and run, no installation |
+| Linux | `mimic_<version>_amd64.AppImage` | Portable, `chmod +x` and run |
+| Linux | `mimic_<version>_amd64.deb` | Debian/Ubuntu package |
+
+The portable Windows build is the very same binary as the installed one — it just is not wrapped in an installer. It still needs the WebView2 runtime, which ships with Windows 10/11 by default.
+
 ---
 
 ## ⚠️ Disclaimer & Known Limitations
 
 - **Badge results are not guaranteed.** Discord decides what counts, so going past the verified numbers below may not progress the badge any further.
 - **Tested on Windows only**, with Discord games tracked up to **~10,000 games in the badge** (Mythic «Универсал»).
+- **Linux: native mode covers only 8 games.** Discord's public detectable database contains just eight Linux executables — Hearts of Iron IV, Factorio, Throne of Lies, VA-11 HALL-A, Fields of Mistria, CS:GO, Move or Die and Terraria — so process-based spoofing cannot go past them. Wine/Proton does not help: those Windows titles exist only as `win32` entries, and the Linux Discord client does not match their processes. The remaining ~24,900 titles are available only through the beta Discord RPC mode, which Discord may not credit to your profile at all.
 - A target of **24,000 games is unverified** — it may work, may be throttled, or may have no effect at all.
 - Game activity spoofing is not officially supported by Discord. Use it at your own risk.
 
