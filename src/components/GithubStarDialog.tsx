@@ -1,6 +1,7 @@
 import React from 'react';
 import { Check, ExternalLink, Github, Star, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface GithubStarDialogProps {
   open: boolean;
@@ -17,6 +18,8 @@ export const GithubStarDialog: React.FC<GithubStarDialogProps> = ({
   onAccept,
   onDecline,
 }) => {
+  const { t, formatNumber } = useI18n();
+
   if (!open) return null;
 
   return (
@@ -39,17 +42,11 @@ export const GithubStarDialog: React.FC<GithubStarDialogProps> = ({
             id="star-dialog-title"
             className="mt-4 text-lg font-bold tracking-tight text-white"
           >
-            Поставь звезду на GitHub
+            {t('star.title')}
           </h2>
 
           <p className="mt-2 text-[13px] leading-relaxed text-neutral-400">
-            mimic уже прошёл{' '}
-            <span className="font-semibold text-white">
-              {gamesCount.toLocaleString('ru-RU')}
-            </span>{' '}
-            игр — это часы сэкономленного времени. Проект бесплатный и без рекламы,
-            а звезда на GitHub помогает ему развиваться и мотивирует автора выпускать
-            обновления.
+            {t('star.body', { count: formatNumber(gamesCount) })}
           </p>
 
           <Button
@@ -58,7 +55,7 @@ export const GithubStarDialog: React.FC<GithubStarDialogProps> = ({
             onClick={() => void onOpenRepo()}
           >
             <Github className="h-4 w-4" />
-            Поставить звезду
+            {t('star.cta')}
             <ExternalLink className="h-3.5 w-3.5 opacity-60" />
           </Button>
 
@@ -69,7 +66,7 @@ export const GithubStarDialog: React.FC<GithubStarDialogProps> = ({
               onClick={onAccept}
             >
               <Check className="h-4 w-4" />
-              Поставил
+              {t('star.accepted')}
             </Button>
 
             <Button
@@ -78,7 +75,7 @@ export const GithubStarDialog: React.FC<GithubStarDialogProps> = ({
               onClick={onDecline}
             >
               <X className="h-4 w-4" />
-              Не поставлю
+              {t('star.declined')}
             </Button>
           </div>
         </div>

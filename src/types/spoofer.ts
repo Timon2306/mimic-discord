@@ -77,6 +77,8 @@ export interface SpooferConfig {
   start_offset?: number;
   skip_previously_spoofed?: boolean;
   spoof_mode: SpoofMode;
+  /** Opt-in beta: allows non-native categories (RPC / console / SDK) to be selected. */
+  beta_enabled?: boolean;
   cooldown_enabled: boolean;
   cooldown_every_n_batches: number;
   cooldown_seconds: number;

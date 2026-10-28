@@ -1,5 +1,6 @@
 use crate::discord::{SpoofMethod, SpoofableGame};
 use crate::history::{load_history, record_played_batch};
+use crate::i18n::{is_russian, pick};
 use crate::rpc::DiscordRpcSession;
 use crate::state::{
     ActiveGameInfo, SpooferConfig, SpooferLogEvent, SpooferStatus, SpooferStatusEvent,
@@ -164,11 +165,12 @@ pub async fn run_spoofer(
             .collect();
         let skipped = before_count - filtered.len();
         if skipped > 0 {
-            log_event(
-                &app,
-                "info",
-                &format!("Пропуск {} ранее эмулированных игр из истории.", skipped),
-            );
+            let message = if is_russian() {
+                format!("Пропуск {} ранее эмулированных игр из истории.", skipped)
+            } else {
+                format!("Skipped {} previously spoofed games from history.", skipped)
+            };
+            log_event(&app, "info", &message);
         }
         filtered
     } else {
@@ -182,10 +184,23 @@ pub async fn run_spoofer(
             "spoofer_status",
             SpooferStatusEvent {
                 status: SpooferStatus::Finished,
-                message: Some("Все доступные игры уже эмулированы согласно истории!".to_string()),
+                message: Some(
+                    pick(
+                        "Все доступные игры уже эмулированы согласно истории!",
+                        "All available games are already spoofed according to history!",
+                    )
+                    .to_string(),
+                ),
             },
         );
-        log_event(&app, "success", "Все игры уже были обработаны.");
+        log_event(
+            &app,
+            "success",
+            pick(
+                "Все игры уже были обработаны.",
+                "All games have already been processed.",
+            ),
+        );
         return;
     }
 
@@ -206,7 +221,11 @@ pub async fn run_spoofer(
 
     if let Err(e) = fs::create_dir_all(&temp_root) {
         *status_lock.write().await = SpooferStatus::Error;
-        let err_msg = format!("Ошибка создания временной папки: {}", e);
+        let err_msg = if is_russian() {
+            format!("Ошибка создания временной папки: {}", e)
+        } else {
+            format!("Failed to create the temporary folder: {}", e)
+        };
         let _ = app.emit(
             "spoofer_status",
             SpooferStatusEvent {
@@ -225,7 +244,11 @@ pub async fn run_spoofer(
 
     if let Err(e) = fs::write(&base_dummy_path, DUMMY_EXE_BYTES) {
         *status_lock.write().await = SpooferStatus::Error;
-        let err_msg = format!("Не удалось создать базовый бинарный файл: {}", e);
+        let err_msg = if is_russian() {
+            format!("Не удалось создать базовый бинарный файл: {}", e)
+        } else {
+            format!("Failed to create the base binary file: {}", e)
+        };
         let _ = app.emit(
             "spoofer_status",
             SpooferStatusEvent {
@@ -254,19 +277,23 @@ pub async fn run_spoofer(
     );
 
     let mode_str = match config.spoof_mode {
-        SpoofMode::Hybrid => "Гибридный (Процессы + RPC)",
-        SpoofMode::ProcessOnly => "Только процессы (.exe)",
-        SpoofMode::RpcOnly => "Остальные (Discord IPC/RPC)",
+        SpoofMode::Hybrid => pick("Гибридный (Процессы + RPC)", "Hybrid (processes + RPC)"),
+        SpoofMode::ProcessOnly => pick("Только процессы (.exe)", "Native processes only"),
+        SpoofMode::RpcOnly => pick("Остальные (Discord IPC/RPC)", "Other (Discord IPC/RPC)"),
     };
 
-    log_event(
-        &app,
-        "info",
-        &format!(
+    let start_message = if is_russian() {
+        format!(
             "Старт mimic: режим {}, цель {} игр, батч {}, удержание {} сек",
             mode_str, target_count, batch_size, config.hold_duration_secs
-        ),
-    );
+        )
+    } else {
+        format!(
+            "mimic started: mode {}, target {} games, batch {}, hold {} sec",
+            mode_str, target_count, batch_size, config.hold_duration_secs
+        )
+    };
+    log_event(&app, "info", &start_message);
 
     let start_time = Instant::now();
     let mut processed_count = 0usize;
@@ -274,20 +301,31 @@ pub async fn run_spoofer(
 
     while processed_count < target_count && !pool.is_empty() {
         if cancel_flag.load(Ordering::SeqCst) {
-            log_event(&app, "warn", "Процесс остановлен пользователем.");
+            log_event(
+                &app,
+                "warn",
+                pick(
+                    "Процесс остановлен пользователем.",
+                    "Stopped by the user.",
+                ),
+            );
             break;
         }
 
         // Smart Cooldown Manager
         if config.cooldown_enabled && batch_counter > 0 && batch_counter % config.cooldown_every_n_batches == 0 {
-            log_event(
-                &app,
-                "info",
-                &format!(
+            let cooldown_message = if is_russian() {
+                format!(
                     "Кулдаун: пауза {} сек для защиты от рейтлимитов Discord...",
                     config.cooldown_seconds
-                ),
-            );
+                )
+            } else {
+                format!(
+                    "Cooldown: pausing {} sec to avoid Discord rate limits...",
+                    config.cooldown_seconds
+                )
+            };
+            log_event(&app, "info", &cooldown_message);
             let cd_start = Instant::now();
             let cd_duration = Duration::from_secs(config.cooldown_seconds);
             while cd_start.elapsed() < cd_duration {
@@ -299,7 +337,14 @@ pub async fn run_spoofer(
             if cancel_flag.load(Ordering::SeqCst) {
                 break;
             }
-            log_event(&app, "info", "Кулдаун завершен, продолжение работы.");
+            log_event(
+                &app,
+                "info",
+                pick(
+                    "Кулдаун завершен, продолжение работы.",
+                    "Cooldown finished, resuming.",
+                ),
+            );
         }
 
         // Check pause
@@ -312,7 +357,11 @@ pub async fn run_spoofer(
                     message: None,
                 },
             );
-            log_event(&app, "warn", "Пауза. Ожидание возобновления...");
+            log_event(
+                &app,
+                "warn",
+                pick("Пауза. Ожидание возобновления...", "Paused. Waiting to resume..."),
+            );
             resume_notify.notified().await;
             if cancel_flag.load(Ordering::SeqCst) {
                 break;
@@ -325,7 +374,11 @@ pub async fn run_spoofer(
                     message: None,
                 },
             );
-            log_event(&app, "info", "Продолжение работы.");
+            log_event(
+                &app,
+                "info",
+                pick("Продолжение работы.", "Resuming."),
+            );
         }
 
         let mut current_batch: Vec<SpoofableGame> = Vec::new();
@@ -452,11 +505,12 @@ pub async fn run_spoofer(
                         spawned_processes.push((child, game.clone(), target_exe_path));
                     }
                     Err(e) => {
-                        log_event(
-                            &app,
-                            "warn",
-                            &format!("Не удалось запустить процесс '{}': {}", game.name, e),
-                        );
+                        let message = if is_russian() {
+                            format!("Не удалось запустить процесс '{}': {}", game.name, e)
+                        } else {
+                            format!("Failed to launch process '{}': {}", game.name, e)
+                        };
+                        log_event(&app, "warn", &message);
                     }
                 }
             } else {
@@ -465,11 +519,12 @@ pub async fn run_spoofer(
                     Ok(mut session) => {
                         let current_pid = std::process::id();
                         if let Err(e) = session.set_activity(&game.name, batch_start_ms, current_pid).await {
-                            log_event(
-                                &app,
-                                "warn",
-                                &format!("Ошибка установки RPC для '{}': {}", game.name, e),
-                            );
+                            let message = if is_russian() {
+                                format!("Ошибка установки RPC для '{}': {}", game.name, e)
+                            } else {
+                                format!("Failed to set RPC activity for '{}': {}", game.name, e)
+                            };
+                            log_event(&app, "warn", &message);
                         } else {
                             active_batch_info.push(ActiveGameInfo {
                                 id: game.id.clone(),
@@ -483,11 +538,12 @@ pub async fn run_spoofer(
                         }
                     }
                     Err(e) => {
-                        log_event(
-                            &app,
-                            "warn",
-                            &format!("RPC пайп недоступен для '{}': {}", game.name, e),
-                        );
+                        let message = if is_russian() {
+                            format!("RPC пайп недоступен для '{}': {}", game.name, e)
+                        } else {
+                            format!("RPC pipe unavailable for '{}': {}", game.name, e)
+                        };
+                        log_event(&app, "warn", &message);
                     }
                 }
             }
@@ -542,16 +598,22 @@ pub async fn run_spoofer(
             })
             .collect();
 
-        log_event(
-            &app,
-            "info",
-            &format!(
+        let batch_message = if is_russian() {
+            format!(
                 "Активный батч ({}/{}): {}",
                 processed_count + current_batch.len(),
                 target_count,
                 batch_titles.join(", ")
-            ),
-        );
+            )
+        } else {
+            format!(
+                "Active batch ({}/{}): {}",
+                processed_count + current_batch.len(),
+                target_count,
+                batch_titles.join(", ")
+            )
+        };
+        log_event(&app, "info", &batch_message);
 
         // Hold processes and RPC sessions for the duration
         let mut hold_start = Instant::now();
@@ -569,7 +631,11 @@ pub async fn run_spoofer(
                         message: None,
                     },
                 );
-                log_event(&app, "warn", "Пауза в текущем батче.");
+                log_event(
+                    &app,
+                    "warn",
+                    pick("Пауза в текущем батче.", "Paused inside the current batch."),
+                );
                 let pause_start = Instant::now();
                 resume_notify.notified().await;
                 if cancel_flag.load(Ordering::SeqCst) {
@@ -584,7 +650,11 @@ pub async fn run_spoofer(
                         message: None,
                     },
                 );
-                log_event(&app, "info", "Продолжение работы.");
+                log_event(
+                &app,
+                "info",
+                pick("Продолжение работы.", "Resuming."),
+            );
             }
 
             tokio::time::sleep(Duration::from_millis(100)).await;
@@ -686,22 +756,30 @@ pub async fn run_spoofer(
 
     let total_elapsed = start_time.elapsed().as_secs();
     if final_status == SpooferStatus::Finished {
-        log_event(
-            &app,
-            "success",
-            &format!(
+        let message = if is_russian() {
+            format!(
                 "Эмуляция {} игр успешно завершена за {} сек! Прогресс сохранен в истории.",
                 processed_count, total_elapsed
-            ),
-        );
+            )
+        } else {
+            format!(
+                "Spoofed {} games in {} sec! Progress saved to history.",
+                processed_count, total_elapsed
+            )
+        };
+        log_event(&app, "success", &message);
     } else {
-        log_event(
-            &app,
-            "info",
-            &format!(
+        let message = if is_russian() {
+            format!(
                 "Работа остановлена. Обработано {} игр за {} сек.",
                 processed_count, total_elapsed
-            ),
-        );
+            )
+        } else {
+            format!(
+                "Stopped. Processed {} games in {} sec.",
+                processed_count, total_elapsed
+            )
+        };
+        log_event(&app, "info", &message);
     }
 }

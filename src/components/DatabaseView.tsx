@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, RefreshCw, Layers, Cpu, Radio, Gamepad2 } from 'lucide-react';
+import { useI18n } from '@/i18n/I18nProvider';
 import { tauriApi } from '@/lib/tauri';
 import type { SpoofableGameItem } from '@/types/spoofer';
 
@@ -15,6 +16,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
   onRefresh,
   isFetching,
 }) => {
+  const { t, formatNumber } = useI18n();
   const [games, setGames] = useState<SpoofableGameItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
@@ -60,10 +62,14 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
         <div>
           <h2 className="text-sm font-semibold text-white flex items-center gap-2">
             <Layers className="w-4 h-4 text-[#5865F2]" />
-            Каталог Detectable игр Discord
+            {t('database.title')}
           </h2>
           <p className="text-xs text-neutral-400 mt-0.5">
-            {games.length.toLocaleString()} игр в базе ({processCount.toLocaleString()} процессов + {rpcCount.toLocaleString()} Discord RPC)
+            {t('database.subtitle', {
+              total: formatNumber(games.length),
+              process: formatNumber(processCount),
+              rpc: formatNumber(rpcCount),
+            })}
           </p>
         </div>
 
@@ -73,7 +79,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
             <Search className="w-3.5 h-3.5 text-neutral-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Поиск по названию, ID или .exe..."
+              placeholder={t('database.search')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full bg-[#1b1c28] border border-white/10 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-[#5865F2]"
@@ -85,7 +91,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
             onClick={onRefresh}
             disabled={isFetching}
             className="p-1.5 rounded-lg bg-[#1b1c28] border border-white/10 hover:bg-white/5 text-neutral-300 disabled:opacity-50"
-            title="Обновить базу"
+            title={t('database.refresh')}
           >
             <RefreshCw
               className={`w-4 h-4 ${isFetching ? 'animate-spin text-[#5865F2]' : ''}`}
@@ -105,9 +111,9 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
               : 'bg-[#1b1c28] border-white/5 text-neutral-400 hover:text-white'
           }`}
         >
-          <span>Все</span>
+          <span>{t('database.all')}</span>
           <span className="font-mono text-[10px] opacity-75">
-            ({games.length.toLocaleString()})
+            ({formatNumber(games.length)})
           </span>
         </button>
 
@@ -121,9 +127,9 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
           }`}
         >
           <Cpu className="w-3 h-3" />
-          <span>Нативные процессы</span>
+          <span>{t('database.processes')}</span>
           <span className="font-mono text-[10px] opacity-75">
-            ({processCount.toLocaleString()})
+            ({formatNumber(processCount)})
           </span>
         </button>
 
@@ -137,9 +143,9 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
           }`}
         >
           <Radio className="w-3 h-3" />
-          <span>Discord RPC / Консоли</span>
+          <span>{t('database.rpc')}</span>
           <span className="font-mono text-[10px] opacity-75">
-            ({rpcCount.toLocaleString()})
+            ({formatNumber(rpcCount)})
           </span>
         </button>
       </div>
@@ -148,11 +154,11 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
       <div className="flex-1 overflow-y-auto pr-1">
         {isLoadingList ? (
           <div className="h-full flex items-center justify-center text-xs text-neutral-400">
-            Загрузка списка игр...
+            {t('database.loading')}
           </div>
         ) : filteredGames.length === 0 ? (
           <div className="h-full flex items-center justify-center text-xs text-neutral-400">
-            Игры не найдены
+            {t('database.empty')}
           </div>
         ) : (
           <div className="space-y-1.5">
@@ -191,7 +197,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
                       )}
                     </div>
                     <div className="font-mono text-[10px] text-neutral-400 truncate">
-                      {game.rel_path ? game.rel_path : 'Discord SDK / Console Activity'}
+                      {game.rel_path ? game.rel_path : t('database.rpcPath')}
                     </div>
                   </div>
                 </div>
@@ -203,7 +209,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({
             ))}
             {filteredGames.length > 300 && (
               <div className="text-center py-2 text-[11px] text-neutral-500 font-mono">
-                Показано 300 из {filteredGames.length.toLocaleString()} игр. Уточните поиск для конкретной игры.
+                {t('database.truncated', { count: formatNumber(filteredGames.length) })}
               </div>
             )}
           </div>

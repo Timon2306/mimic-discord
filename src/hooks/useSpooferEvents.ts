@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useI18n } from '@/i18n/I18nProvider';
 import { tauriApi } from '@/lib/tauri';
 import type {
   SpooferStatus,
@@ -10,6 +11,7 @@ import type {
 const MAX_LOGS = 600;
 
 export function useSpooferEvents() {
+  const { t, formatNumber } = useI18n();
   const [status, setStatus] = useState<SpooferStatus>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -148,10 +150,10 @@ export function useSpooferEvents() {
         const msg = e instanceof Error ? e.message : String(e);
         setErrorMessage(msg);
         setStatus('error');
-        addLog('error', `Failed to start: ${msg}`);
+        addLog('error', t('logs.startFailed', { error: msg }));
       }
     },
-    [addLog]
+    [addLog, t]
   );
 
   const pause = useCallback(async () => {
@@ -160,9 +162,9 @@ export function useSpooferEvents() {
       await tauriApi.pauseSpoofer();
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      addLog('error', `Failed to pause: ${msg}`);
+      addLog('error', t('logs.pauseFailed', { error: msg }));
     }
-  }, [addLog]);
+  }, [addLog, t]);
 
   const resume = useCallback(async () => {
     try {
@@ -170,9 +172,9 @@ export function useSpooferEvents() {
       await tauriApi.resumeSpoofer();
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      addLog('error', `Failed to resume: ${msg}`);
+      addLog('error', t('logs.resumeFailed', { error: msg }));
     }
-  }, [addLog]);
+  }, [addLog, t]);
 
   const stop = useCallback(async () => {
     try {
@@ -184,40 +186,44 @@ export function useSpooferEvents() {
       await tauriApi.stopSpoofer();
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      addLog('error', `Failed to stop: ${msg}`);
+      addLog('error', t('logs.stopFailed', { error: msg }));
     }
-  }, [addLog]);
+  }, [addLog, t]);
 
   const fetchGames = useCallback(async () => {
     try {
       setIsFetchingDatabase(true);
-      addLog('info', 'Загрузка официальной базы игр Discord...');
+      addLog('info', t('logs.fetching'));
       const res = await tauriApi.fetchGames();
       setTotalDatabaseGames(res.total);
       setProcessGamesCount(res.process_count);
       setRpcGamesCount(res.rpc_count);
       addLog(
         'success',
-        `База обновлена: всего ${res.total.toLocaleString()} игр (${res.process_count.toLocaleString()} нативных процессов + ${res.rpc_count.toLocaleString()} Discord RPC).`
+        t('logs.fetched', {
+          total: formatNumber(res.total),
+          process: formatNumber(res.process_count),
+          rpc: formatNumber(res.rpc_count),
+        })
       );
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      addLog('error', `Ошибка загрузки базы: ${msg}`);
+      addLog('error', t('logs.fetchFailed', { error: msg }));
     } finally {
       setIsFetchingDatabase(false);
     }
-  }, [addLog]);
+  }, [addLog, t, formatNumber]);
 
   const clearHistory = useCallback(async () => {
     try {
       await tauriApi.clearHistory();
       setHistoryCount(0);
-      addLog('info', 'История эмулированных игр очищена.');
+      addLog('info', t('logs.historyCleared'));
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      addLog('error', `Ошибка очистки истории: ${msg}`);
+      addLog('error', t('logs.historyClearFailed', { error: msg }));
     }
-  }, [addLog]);
+  }, [addLog, t]);
 
   const exportHistory = useCallback(async () => {
     try {
@@ -229,12 +235,12 @@ export function useSpooferEvents() {
       a.download = `mimic-history-${Date.now()}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      addLog('success', 'История успешно экспортирована в файл JSON.');
+      addLog('success', t('logs.historyExported'));
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      addLog('error', `Ошибка экспорта истории: ${msg}`);
+      addLog('error', t('logs.historyExportFailed', { error: msg }));
     }
-  }, [addLog]);
+  }, [addLog, t]);
 
   const importHistory = useCallback(
     async (jsonData: string) => {
@@ -242,15 +248,15 @@ export function useSpooferEvents() {
         const added = await tauriApi.importHistory(jsonData);
         const state = await tauriApi.getSpooferState();
         setHistoryCount(state.history_count);
-        addLog('success', `Импортировано ${added} новых записей в историю.`);
+        addLog('success', t('logs.historyImported', { count: formatNumber(added) }));
         return added;
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
-        addLog('error', `Ошибка импорта истории: ${msg}`);
+        addLog('error', t('logs.historyImportFailed', { error: msg }));
         throw e;
       }
     },
-    [addLog]
+    [addLog, t, formatNumber]
   );
 
   return {

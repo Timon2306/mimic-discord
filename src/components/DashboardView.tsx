@@ -1,5 +1,6 @@
 import React from 'react';
-import { Gamepad2 } from 'lucide-react';
+import { Cpu, Gamepad2, Settings as SettingsIcon } from 'lucide-react';
+import { useI18n } from '@/i18n/I18nProvider';
 import type { SpooferStatus, SpooferTickEvent, SpooferLogEvent, SpooferConfig } from '@/types/spoofer';
 
 interface DashboardViewProps {
@@ -14,6 +15,7 @@ interface DashboardViewProps {
   logs: SpooferLogEvent[];
   config: SpooferConfig;
   onConfigChange: (updater: (prev: SpooferConfig) => SpooferConfig) => void;
+  onOpenSettings: () => void;
   onStart: () => void;
   onPause: () => void;
   onResume: () => void;
@@ -32,14 +34,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   logs,
   config,
   onConfigChange,
+  onOpenSettings,
   onStart,
   onPause,
   onResume,
   onStop,
 }) => {
+  const { t, formatNumber } = useI18n();
+
   const isRunning = status === 'running';
   const isPaused = status === 'paused';
   const isIdle = status === 'idle' || status === 'finished' || status === 'error';
+  const isBetaEnabled = Boolean(config.beta_enabled);
 
   const currentModeTotal = React.useMemo(() => {
     if (config.spoof_mode === 'process_only') return processGamesCount || 0;
@@ -70,45 +76,50 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const currentDone = tickData.current_index;
   const progressPercent = totalTarget > 0 ? Math.min(100, Math.round((currentDone / totalTarget) * 100)) : 0;
 
-  // Format ETA to Russian string like "~18 минут" or "< 1 минуты"
-  const formatEtaRussian = (seconds: number): string => {
-    if (isNaN(seconds) || seconds <= 0 || !isFinite(seconds)) return '~0 минут';
+  const formatEta = (seconds: number): string => {
+    if (isNaN(seconds) || seconds <= 0 || !isFinite(seconds)) return t('dashboard.etaZero');
     const mins = Math.ceil(seconds / 60);
     if (mins < 60) {
-      return `~${mins} минут`;
+      return t('dashboard.etaMinutes', { count: mins });
     }
     const hours = Math.floor(mins / 60);
     const remMins = mins % 60;
-    return `~${hours} ч ${remMins} мин`;
+    return t('dashboard.etaHours', { hours, minutes: remMins });
   };
+
+  const modeLabel = config.spoof_mode === 'rpc_only'
+    ? t('dashboard.modeOther')
+    : config.spoof_mode === 'process_only'
+    ? t('dashboard.modeProcess')
+    : t('dashboard.modeHybrid');
 
   return (
     <div className="flex flex-col gap-3 h-full overflow-hidden pr-1">
       {/* 1. TOP STATUS CARD */}
       <div className="bg-[#161722] border border-[#232535] rounded-xl p-4 shadow-sm flex flex-col gap-2.5 flex-shrink-0">
         <div className="flex items-center gap-2 text-sm font-semibold">
-          <span className="text-white">СТАТУС:</span>
+          <span className="text-white">{t('dashboard.statusLabel')}</span>
           {isRunning && (
             <span className="text-emerald-400 font-bold flex items-center gap-1.5">
-              АКТИВНО{' '}
+              {t('dashboard.statusRunning')}{' '}
               <span className="text-xs font-normal text-neutral-400">
-                (Запущено {tickData.active_batch.length} процессов)
+                {t('dashboard.statusRunningHint', { count: tickData.active_batch.length })}
               </span>
             </span>
           )}
           {isPaused && (
             <span className="text-amber-400 font-bold flex items-center gap-1.5">
-              ПАУЗА{' '}
+              {t('dashboard.statusPaused')}{' '}
               <span className="text-xs font-normal text-neutral-400">
-                (Процессы приостановлены)
+                {t('dashboard.statusPausedHint')}
               </span>
             </span>
           )}
           {isIdle && (
             <span className="text-neutral-400 font-bold flex items-center gap-1.5">
-              ОЖИДАНИЕ{' '}
+              {t('dashboard.statusIdle')}{' '}
               <span className="text-xs font-normal text-neutral-500">
-                (Нажмите «СТАРТ» для запуска)
+                {t('dashboard.statusIdleHint')}
               </span>
             </span>
           )}
@@ -128,14 +139,36 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* Subtitle */}
         <div className="text-center text-xs text-neutral-400">
           {isRunning || isPaused ? (
+            currentModeHistory > 0 ? (
+              <>
+                {t('dashboard.progressRunningHistory', {
+                  done: formatNumber(currentDone),
+                  total: formatNumber(totalTarget),
+                  count: formatNumber(currentModeHistory),
+                })}
+              </>
+            ) : (
+              <>
+                {t('dashboard.progressRunning', {
+                  done: formatNumber(currentDone),
+                  total: formatNumber(totalTarget),
+                })}
+              </>
+            )
+          ) : currentModeHistory > 0 && config.skip_previously_spoofed ? (
             <>
-              {currentDone} из {totalTarget} игр эмулировано
-              {currentModeHistory > 0 && ` (${currentModeHistory} в истории)`}
+              {t('dashboard.progressIdleHistory', {
+                total: formatNumber(currentModeTotal),
+                remaining: formatNumber(idleGamesRemaining),
+                count: formatNumber(currentModeHistory),
+              })}
             </>
           ) : (
             <>
-              {currentModeTotal} игр в категории ({idleGamesRemaining} к запуску
-              {currentModeHistory > 0 && config.skip_previously_spoofed && `, ${currentModeHistory} уже пройдено`})
+              {t('dashboard.progressIdle', {
+                total: formatNumber(currentModeTotal),
+                remaining: formatNumber(idleGamesRemaining),
+              })}
             </>
           )}
         </div>
@@ -148,75 +181,115 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-white">
-                Управление батчами
+                {t('dashboard.batchControl')}
               </h2>
             </div>
 
-            {/* Selector: Источник / Тип игр */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-neutral-300">Какие игры запускать:</span>
-                <span className="font-mono text-[10px] text-discord-light font-semibold">
-                  {config.spoof_mode === 'rpc_only'
-                    ? 'Остальные (RPC / Консоли)'
-                    : config.spoof_mode === 'process_only'
-                    ? 'Только процессы (ОС .exe)'
-                    : 'Все игры (Гибридный режим)'}
-                </span>
-              </div>
-              <div className="grid grid-cols-3 gap-1">
-                <button
-                  type="button"
-                  disabled={!isIdle}
-                  onClick={() => onConfigChange((prev) => ({ ...prev, spoof_mode: 'hybrid' }))}
-                  className={`py-1.5 px-1.5 text-[11px] rounded border transition-all text-center flex flex-col items-center justify-center ${
-                    config.spoof_mode === 'hybrid'
-                      ? 'bg-[#5865F2] text-white border-[#5865F2] font-semibold shadow-sm'
-                      : 'bg-[#1b1c28] text-neutral-400 border-white/10 hover:text-white'
-                  }`}
-                  title="Все доступные игры (процессы + RPC)"
-                >
-                  <span>Все {totalAvailableGames > 0 ? `(${totalAvailableGames})` : ''}</span>
-                  <span className="text-[9px] opacity-75 font-mono">Гибрид</span>
-                </button>
+            {/* Game source: native-only by default, category picker only in beta */}
+            {isBetaEnabled ? (
+              <div className="space-y-1.5">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-neutral-300 flex items-center gap-1.5">
+                    {t('dashboard.whichGames')}
+                    <span className="text-[9px] font-mono font-bold uppercase tracking-wide px-1 py-0.5 rounded bg-amber-400/15 text-amber-300 border border-amber-400/25">
+                      {t('dashboard.betaBadge')}
+                    </span>
+                  </span>
+                  <span className="font-mono text-[10px] text-discord-light font-semibold">
+                    {modeLabel}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-1">
+                  <button
+                    type="button"
+                    disabled={!isIdle}
+                    onClick={() => onConfigChange((prev) => ({ ...prev, spoof_mode: 'hybrid' }))}
+                    className={`py-1.5 px-1.5 text-[11px] rounded border transition-all text-center flex flex-col items-center justify-center ${
+                      config.spoof_mode === 'hybrid'
+                        ? 'bg-[#5865F2] text-white border-[#5865F2] font-semibold shadow-sm'
+                        : 'bg-[#1b1c28] text-neutral-400 border-white/10 hover:text-white'
+                    }`}
+                    title={t('dashboard.tabAllTitle')}
+                  >
+                    <span>
+                      {t('dashboard.tabAll')}{' '}
+                      {totalAvailableGames > 0 ? `(${formatNumber(totalAvailableGames)})` : ''}
+                    </span>
+                    <span className="text-[9px] opacity-75 font-mono">
+                      {t('dashboard.tabAllCaption')}
+                    </span>
+                  </button>
 
-                <button
-                  type="button"
-                  disabled={!isIdle}
-                  onClick={() => onConfigChange((prev) => ({ ...prev, spoof_mode: 'rpc_only' }))}
-                  className={`py-1.5 px-1.5 text-[11px] rounded border transition-all text-center flex flex-col items-center justify-center ${
-                    config.spoof_mode === 'rpc_only'
-                      ? 'bg-[#8b5cf6] text-white border-[#8b5cf6] font-semibold shadow-sm'
-                      : 'bg-[#1b1c28] text-neutral-400 border-white/10 hover:text-white'
-                  }`}
-                  title="Остальные игры без локального файла (консольные, мобильные, SDK)"
-                >
-                  <span className="text-[#e9d5ff]">Остальные {rpcGamesCount && rpcGamesCount > 0 ? `(${rpcGamesCount})` : '(RPC)'}</span>
-                  <span className="text-[9px] opacity-75 font-mono">Консоли / SDK</span>
-                </button>
+                  <button
+                    type="button"
+                    disabled={!isIdle}
+                    onClick={() => onConfigChange((prev) => ({ ...prev, spoof_mode: 'rpc_only' }))}
+                    className={`py-1.5 px-1.5 text-[11px] rounded border transition-all text-center flex flex-col items-center justify-center ${
+                      config.spoof_mode === 'rpc_only'
+                        ? 'bg-[#8b5cf6] text-white border-[#8b5cf6] font-semibold shadow-sm'
+                        : 'bg-[#1b1c28] text-neutral-400 border-white/10 hover:text-white'
+                    }`}
+                    title={t('dashboard.tabOtherTitle')}
+                  >
+                    <span className="text-[#e9d5ff]">
+                      {t('dashboard.tabOther')}{' '}
+                      {rpcGamesCount && rpcGamesCount > 0 ? `(${formatNumber(rpcGamesCount)})` : ''}
+                    </span>
+                    <span className="text-[9px] opacity-75 font-mono">
+                      {t('dashboard.tabOtherCaption')}
+                    </span>
+                  </button>
 
-                <button
-                  type="button"
-                  disabled={!isIdle}
-                  onClick={() => onConfigChange((prev) => ({ ...prev, spoof_mode: 'process_only' }))}
-                  className={`py-1.5 px-1.5 text-[11px] rounded border transition-all text-center flex flex-col items-center justify-center ${
-                    config.spoof_mode === 'process_only'
-                      ? 'bg-[#3b82f6] text-white border-[#3b82f6] font-semibold shadow-sm'
-                      : 'bg-[#1b1c28] text-neutral-400 border-white/10 hover:text-white'
-                  }`}
-                  title="Только классические процессы (.exe)"
-                >
-                  <span className="text-[#bfdbfe]">Только ОС {processGamesCount && processGamesCount > 0 ? `(${processGamesCount})` : '(.exe)'}</span>
-                  <span className="text-[9px] opacity-75 font-mono">Процессы</span>
-                </button>
+                  <button
+                    type="button"
+                    disabled={!isIdle}
+                    onClick={() => onConfigChange((prev) => ({ ...prev, spoof_mode: 'process_only' }))}
+                    className={`py-1.5 px-1.5 text-[11px] rounded border transition-all text-center flex flex-col items-center justify-center ${
+                      config.spoof_mode === 'process_only'
+                        ? 'bg-[#3b82f6] text-white border-[#3b82f6] font-semibold shadow-sm'
+                        : 'bg-[#1b1c28] text-neutral-400 border-white/10 hover:text-white'
+                    }`}
+                    title={t('dashboard.tabProcessTitle')}
+                  >
+                    <span className="text-[#bfdbfe]">
+                      {t('dashboard.tabProcess')}{' '}
+                      {processGamesCount && processGamesCount > 0 ? `(${formatNumber(processGamesCount)})` : ''}
+                    </span>
+                    <span className="text-[9px] opacity-75 font-mono">
+                      {t('dashboard.tabProcessCaption')}
+                    </span>
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-start gap-2.5 rounded-lg border border-blue-500/20 bg-blue-500/5 p-2.5">
+                <Cpu className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[11px] font-medium text-neutral-100">
+                    {t('dashboard.nativeOnly', {
+                      count: formatNumber(processGamesCount || 0),
+                    })}
+                  </div>
+                  <div className="text-[10px] text-neutral-500 mt-0.5 leading-snug">
+                    {t('dashboard.nativeOnlyHint')}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={onOpenSettings}
+                    className="mt-1.5 inline-flex items-center gap-1 text-[10px] text-[#93a4ff] hover:text-white transition-colors"
+                  >
+                    <SettingsIcon className="w-3 h-3" />
+                    {t('dashboard.openSettings')}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Slider 1: Размер батча */}
             <div className="space-y-1.5">
               <div className="flex justify-between items-center text-xs">
                 <span className="text-neutral-300">
-                  Параллельных процессов:
+                  {t('dashboard.parallel')}
                 </span>
                 <span className="font-mono font-bold text-[#5865F2]">
                   {config.batch_size}
@@ -242,22 +315,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="space-y-1.5">
               <div className="flex justify-between items-center text-xs">
                 <span className="text-neutral-300">
-                  Время удержания:
+                  {t('dashboard.holdTime')}
                 </span>
                 <span className="font-mono font-bold text-[#22c55e]">
                   {config.hold_duration_secs >= 60
-                    ? `${(config.hold_duration_secs / 60).toFixed(1)} мин (${config.hold_duration_secs}с)`
-                    : `${config.hold_duration_secs} сек`}
+                    ? t('dashboard.holdMinutes', {
+                        minutes: (config.hold_duration_secs / 60).toFixed(1),
+                        seconds: config.hold_duration_secs,
+                      })
+                    : t('dashboard.holdSeconds', { count: config.hold_duration_secs })}
                 </span>
               </div>
 
               {/* Quick Presets */}
               <div className="grid grid-cols-4 gap-1 pt-0.5">
                 {[
-                  { label: '15с (Турбо)', val: 15 },
-                  { label: '1 мин', val: 60 },
-                  { label: '5 мин', val: 300 },
-                  { label: '1 час (Фарм)', val: 3600 },
+                  { label: t('dashboard.preset15'), val: 15 },
+                  { label: t('dashboard.preset60'), val: 60 },
+                  { label: t('dashboard.preset300'), val: 300 },
+                  { label: t('dashboard.preset3600'), val: 3600 },
                 ].map((preset) => (
                   <button
                     key={preset.val}
@@ -305,7 +381,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   onClick={onStart}
                   className="flex-1 py-2 px-4 rounded-lg bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-xs uppercase tracking-wider transition-all shadow-md shadow-discord/20 active:scale-[0.98]"
                 >
-                  Старт
+                  {t('dashboard.start')}
                 </button>
               )}
 
@@ -315,7 +391,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   onClick={onPause}
                   className="flex-1 py-2 px-4 rounded-lg bg-[#5865F2] hover:bg-[#4752c4] text-white font-semibold text-xs uppercase tracking-wider transition-all shadow-md shadow-discord/20 active:scale-[0.98]"
                 >
-                  Пауза
+                  {t('dashboard.pause')}
                 </button>
               )}
 
@@ -325,7 +401,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   onClick={onResume}
                   className="flex-1 py-2 px-4 rounded-lg bg-[#22c55e] hover:bg-[#16a34a] text-white font-semibold text-xs uppercase tracking-wider transition-all shadow-md shadow-emerald-500/20 active:scale-[0.98]"
                 >
-                  Продолжить
+                  {t('dashboard.resume')}
                 </button>
               )}
 
@@ -335,7 +411,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 disabled={isIdle}
                 className="flex-1 py-2 px-4 rounded-lg bg-[#3d181e] hover:bg-[#521e27] text-white font-semibold text-xs uppercase tracking-wider transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                Стоп
+                {t('dashboard.stop')}
               </button>
             </div>
           </div>
@@ -343,19 +419,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {/* Quick Stats below buttons */}
           <div className="pt-3 border-t border-white/5 space-y-1 text-xs">
             <div className="flex justify-between items-center">
-              <span className="text-neutral-400">Успешно:</span>
-              <span className="font-mono font-medium text-white">{currentDone}</span>
+              <span className="text-neutral-400">{t('dashboard.succeeded')}</span>
+              <span className="font-mono font-medium text-white">{formatNumber(currentDone)}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-neutral-400">Ошибок:</span>
+              <span className="text-neutral-400">{t('dashboard.errors')}</span>
               <span className="font-mono font-medium text-white">0</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-neutral-400">Оставшееся время:</span>
+              <span className="text-neutral-400">{t('dashboard.timeLeft')}</span>
               <span className="font-mono font-medium text-neutral-300">
                 {isRunning || isPaused
-                  ? formatEtaRussian(tickData.estimated_remaining_secs)
-                  : `${formatEtaRussian(idleEstimatedSecs)} (расчёт)`}
+                  ? formatEta(tickData.estimated_remaining_secs)
+                  : `${formatEta(idleEstimatedSecs)} ${t('dashboard.estimate')}`}
               </span>
             </div>
           </div>
@@ -365,10 +441,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         <div className="bg-[#161722] border border-[#232535] rounded-xl p-4 flex flex-col shadow-sm min-h-0 overflow-hidden">
           <div className="flex items-center justify-between pb-2 border-b border-white/5 flex-shrink-0">
             <h2 className="text-sm font-semibold text-white">
-              Активные процессы
+              {t('dashboard.activeProcesses')}
             </h2>
             <span className="text-[11px] font-mono text-neutral-400">
-              {tickData.active_batch.length} шт.
+              {t('dashboard.pieces', { count: tickData.active_batch.length })}
             </span>
           </div>
 
@@ -376,9 +452,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {tickData.active_batch.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center text-neutral-500 text-xs p-4">
                 <Gamepad2 className="w-8 h-8 opacity-25 mb-1.5" />
-                <span>Нет активных процессов</span>
+                <span>{t('dashboard.noActive')}</span>
                 <span className="text-[10px] text-neutral-600 mt-0.5">
-                  {isRunning ? 'Загрузка следующего батча...' : 'Нажмите «СТАРТ» для запуска'}
+                  {isRunning ? t('dashboard.loadingNext') : t('dashboard.pressStart')}
                 </span>
               </div>
             ) : (
@@ -438,7 +514,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="bg-[#101117] border border-[#1d1f2b] rounded-lg p-3 h-36 flex flex-col font-mono text-[11px] shadow-inner flex-shrink-0">
         <div className="flex-1 overflow-y-auto space-y-1 pr-1 text-[#d1d5db]">
           {logs.length === 0 ? (
-            <div className="text-neutral-500 italic">Ожидание событий...</div>
+            <div className="text-neutral-500 italic">{t('dashboard.waitingEvents')}</div>
           ) : (
             logs.slice(-30).map((log) => (
               <div key={log.id} className="leading-snug truncate">

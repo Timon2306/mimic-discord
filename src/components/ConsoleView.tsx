@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Terminal, Trash2, ArrowDown, Copy, Check } from 'lucide-react';
+import { useI18n } from '@/i18n/I18nProvider';
 import type { SpooferLogEvent } from '@/types/spoofer';
 
 interface ConsoleViewProps {
@@ -8,6 +9,7 @@ interface ConsoleViewProps {
 }
 
 export const ConsoleView: React.FC<ConsoleViewProps> = ({ logs, onClear }) => {
+  const { t, formatNumber } = useI18n();
   const [autoScroll, setAutoScroll] = useState(true);
   const [copied, setCopied] = useState(false);
   const logContainerRef = useRef<HTMLDivElement>(null);
@@ -34,10 +36,10 @@ export const ConsoleView: React.FC<ConsoleViewProps> = ({ logs, onClear }) => {
         <div className="flex items-center gap-2">
           <Terminal className="w-4 h-4 text-[#5865F2]" />
           <h2 className="text-sm font-semibold text-white">
-            Терминал исполнения
+            {t('console.title')}
           </h2>
           <span className="text-xs text-neutral-500 font-mono">
-            ({logs.length} записей)
+            {t('console.entries', { count: formatNumber(logs.length) })}
           </span>
         </div>
 
@@ -50,34 +52,34 @@ export const ConsoleView: React.FC<ConsoleViewProps> = ({ logs, onClear }) => {
                 ? 'bg-[#1b1c28] border-[#5865F2]/40 text-[#5865F2]'
                 : 'bg-[#1b1c28] border-white/10 text-neutral-400'
             }`}
-            title="Автопрокрутка"
+            title={t('console.autoscroll')}
           >
             <ArrowDown className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline text-[11px]">Автоскролл</span>
+            <span className="hidden sm:inline text-[11px]">{t('console.autoscroll')}</span>
           </button>
 
           <button
             type="button"
             onClick={handleCopyLogs}
             className="p-1.5 rounded-lg bg-[#1b1c28] border border-white/10 text-neutral-400 hover:text-white text-xs flex items-center gap-1 transition-all"
-            title="Скопировать все логи"
+            title={t('console.copyTitle')}
           >
             {copied ? (
               <Check className="w-3.5 h-3.5 text-emerald-400" />
             ) : (
               <Copy className="w-3.5 h-3.5" />
             )}
-            <span className="hidden sm:inline text-[11px]">Копировать</span>
+            <span className="hidden sm:inline text-[11px]">{t('console.copy')}</span>
           </button>
 
           <button
             type="button"
             onClick={onClear}
             className="p-1.5 rounded-lg bg-[#1b1c28] border border-white/10 text-neutral-400 hover:text-red-400 text-xs flex items-center gap-1 transition-all"
-            title="Очистить консоль"
+            title={t('console.clearTitle')}
           >
             <Trash2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline text-[11px]">Очистить</span>
+            <span className="hidden sm:inline text-[11px]">{t('console.clear')}</span>
           </button>
         </div>
       </div>
@@ -89,7 +91,7 @@ export const ConsoleView: React.FC<ConsoleViewProps> = ({ logs, onClear }) => {
       >
         {logs.length === 0 ? (
           <div className="h-full flex items-center justify-center text-neutral-500 text-xs">
-            Консоль пуста
+            {t('console.empty')}
           </div>
         ) : (
           logs.map((log) => (

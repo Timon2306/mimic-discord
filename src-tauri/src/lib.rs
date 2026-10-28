@@ -1,6 +1,7 @@
 pub mod commands;
 pub mod discord;
 pub mod history;
+pub mod i18n;
 pub mod rpc;
 pub mod spoofer;
 pub mod state;
@@ -24,6 +25,7 @@ pub fn run() {
             commands::export_history,
             commands::import_history,
             commands::open_external_url,
+            commands::set_language,
         ])
         .run(tauri::generate_context!())
         .expect("error while running mimic desktop application");

@@ -60,6 +60,12 @@ export const tauriApi = {
     return invoke('get_spoofer_state');
   },
 
+  // Keeps the Rust-side runtime logs in the language picked in Settings
+  setLanguage: (language: string): Promise<void> => {
+    if (!isTauriRuntime()) return Promise.resolve();
+    return invoke('set_language', { language });
+  },
+
   // Opens a GitHub link in the system default browser
   openExternalUrl: async (url: string): Promise<void> => {
     if (isTauriRuntime()) {

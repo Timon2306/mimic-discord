@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Sidebar, type ActiveTab } from '@/components/Sidebar';
 import { DashboardView } from '@/components/DashboardView';
 import { DatabaseView } from '@/components/DatabaseView';
@@ -17,7 +17,9 @@ export const App: React.FC = () => {
     batch_size: 8,
     hold_duration_secs: 15,
     skip_previously_spoofed: true,
-    spoof_mode: 'hybrid',
+    // Native OS games only by default; other categories require the beta opt-in.
+    spoof_mode: 'process_only',
+    beta_enabled: false,
     cooldown_enabled: true,
     cooldown_every_n_batches: 25,
     cooldown_seconds: 30,
@@ -47,13 +49,22 @@ export const App: React.FC = () => {
   // "Star us on GitHub" dialog — appears once the threshold of spoofed games is reached
   const starPrompt = useStarPrompt(historyCount);
 
+  // With beta off only native OS games may run, no matter what was picked earlier.
+  const effectiveConfig = useMemo<SpooferConfig>(
+    () => ({
+      ...config,
+      spoof_mode: config.beta_enabled ? config.spoof_mode : 'process_only',
+    }),
+    [config]
+  );
+
   // Load database on start if empty
   useEffect(() => {
     actions.fetchGames();
   }, []);
 
   const handleStart = () => {
-    actions.start(config);
+    actions.start(effectiveConfig);
   };
 
   return (
@@ -85,8 +96,9 @@ export const App: React.FC = () => {
               historyProcessCount={historyProcessCount}
               historyRpcCount={historyRpcCount}
               logs={logs}
-              config={config}
+              config={effectiveConfig}
               onConfigChange={setConfig}
+              onOpenSettings={() => setActiveTab('settings')}
               onStart={handleStart}
               onPause={actions.pause}
               onResume={actions.resume}
