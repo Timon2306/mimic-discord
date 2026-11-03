@@ -83,4 +83,8 @@ export interface SpooferConfig {
   cooldown_every_n_batches: number;
   cooldown_seconds: number;
   jitter_enabled: boolean;
+  /** Farm mode: exactly these games run as one fixed batch, without rotation. */
+  farm_game_ids?: string[];
+  /** Farm time limit; null keeps the games running until stopped. */
+  farm_duration_secs?: number | null;
 }

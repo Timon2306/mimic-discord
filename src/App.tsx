@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Sidebar, type ActiveTab } from '@/components/Sidebar';
 import { DashboardView } from '@/components/DashboardView';
+import { FarmView } from '@/components/FarmView';
 import { DatabaseView } from '@/components/DatabaseView';
 import { ConsoleView } from '@/components/ConsoleView';
 import { SettingsView } from '@/components/SettingsView';
@@ -12,6 +13,7 @@ import type { SpooferConfig } from '@/types/spoofer';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
+  const [isFarmRun, setIsFarmRun] = useState(false);
   const [config, setConfig] = useState<SpooferConfig>({
     limit: null,
     batch_size: 8,
@@ -64,7 +66,17 @@ export const App: React.FC = () => {
   }, []);
 
   const handleStart = () => {
+    setIsFarmRun(false);
     actions.start(effectiveConfig);
+  };
+
+  const handleStartFarm = (gameIds: string[], durationSecs: number | null) => {
+    setIsFarmRun(true);
+    actions.start({
+      ...effectiveConfig,
+      farm_game_ids: gameIds,
+      farm_duration_secs: durationSecs,
+    });
   };
 
   return (
@@ -102,6 +114,18 @@ export const App: React.FC = () => {
               onStart={handleStart}
               onPause={actions.pause}
               onResume={actions.resume}
+              onStop={actions.stop}
+            />
+          )}
+
+          {activeTab === 'farm' && (
+            <FarmView
+              status={status}
+              tickData={tickData}
+              isFarmRun={isFarmRun}
+              isBetaEnabled={Boolean(config.beta_enabled)}
+              isFetching={isFetchingDatabase}
+              onStart={handleStartFarm}
               onStop={actions.stop}
             />
           )}

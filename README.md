@@ -36,7 +36,7 @@ Discord tracks two badges for desktop gamers:
 2. **Game Time (Время в играх)**:
    - Tracks total playtime hours.
    - Running parallel dummy processes multiplies tracked hours (e.g. 8x boost).
-   - Recommended setting: **Batch Size: 8–20**, **Hold Duration: 30–60 min**.
+   - Use the **Hour farm** tab: pick up to 20 games and they keep running without rotating until you stop them or the timer ends.
 
 ---
 

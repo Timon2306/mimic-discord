@@ -98,6 +98,12 @@ pub struct SpooferConfig {
     pub cooldown_seconds: u64,
     #[serde(default)]
     pub jitter_enabled: bool,
+    /// Farm mode: when non-empty, exactly these games run as one fixed batch.
+    #[serde(default)]
+    pub farm_game_ids: Vec<String>,
+    /// Farm mode time limit; `None` keeps the games running until stopped.
+    #[serde(default)]
+    pub farm_duration_secs: Option<u64>,
 }
 
 pub struct AppState {

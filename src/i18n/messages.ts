@@ -9,6 +9,7 @@ export const LANGUAGES: Language[] = ['en', 'ru'];
 const en = {
   // Sidebar
   'nav.dashboard': 'Dashboard',
+  'nav.farm': 'Hour farm',
   'nav.database': 'Game database',
   'nav.console': 'Log console',
   'nav.settings': 'Settings',
@@ -74,6 +75,22 @@ const en = {
   'dashboard.loadingNext': 'Loading the next batch...',
   'dashboard.pressStart': 'Press START to begin',
   'dashboard.waitingEvents': 'Waiting for events...',
+
+  // Farm view
+  'farm.title': 'Hour farm',
+  'farm.subtitle': 'The selected games run together and never change until you stop them or the timer ends.',
+  'farm.untilStopped': 'Until stopped',
+  'farm.durationHours': '{count} h',
+  'farm.start': 'Start farm',
+  'farm.elapsed': 'Running:',
+  'farm.left': 'left:',
+  'farm.busy': 'Another run is active. Stop it on the dashboard to start the farm.',
+  'farm.selected': 'Games to farm',
+  'farm.emptySelection': 'Find games on the right and add them here.',
+  'farm.searchHint': 'Search {count} games by name, ID or .exe',
+  'farm.exeConflict': '{exe} is already used by a selected game',
+  'farm.add': 'Add to farm',
+  'farm.remove': 'Remove from farm',
 
   // Settings
   'settings.title': 'App settings',
@@ -175,6 +192,7 @@ export type MessageKey = keyof typeof en;
 
 const ru: Record<MessageKey, string> = {
   'nav.dashboard': 'Дашборд',
+  'nav.farm': 'Фарм часов',
   'nav.database': 'База игр',
   'nav.console': 'Консоль логов',
   'nav.settings': 'Настройки',
@@ -238,6 +256,21 @@ const ru: Record<MessageKey, string> = {
   'dashboard.loadingNext': 'Загрузка следующего батча...',
   'dashboard.pressStart': 'Нажмите «СТАРТ» для запуска',
   'dashboard.waitingEvents': 'Ожидание событий...',
+
+  'farm.title': 'Фарм часов',
+  'farm.subtitle': 'Выбранные игры работают вместе и не меняются, пока вы их не остановите или не выйдет таймер.',
+  'farm.untilStopped': 'До остановки',
+  'farm.durationHours': '{count} ч',
+  'farm.start': 'Начать фарм',
+  'farm.elapsed': 'Идёт:',
+  'farm.left': 'осталось:',
+  'farm.busy': 'Уже идёт другой запуск. Остановите его на дашборде, чтобы начать фарм.',
+  'farm.selected': 'Игры для фарма',
+  'farm.emptySelection': 'Найдите игры справа и добавьте их сюда.',
+  'farm.searchHint': 'Поиск среди {count} игр по названию, ID или .exe',
+  'farm.exeConflict': '{exe} уже занят выбранной игрой',
+  'farm.add': 'Добавить в фарм',
+  'farm.remove': 'Убрать из фарма',
 
   'settings.title': 'Настройки приложения',
   'settings.subtitle': 'Параметры гибридной эмуляции, безопасности, умных кулдаунов и истории',

@@ -21,6 +21,8 @@ static DUMMY_EXE_BYTES: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/dummy.
 #[cfg(not(windows))]
 static DUMMY_EXE_BYTES: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/dummy"));
 
+const MAX_FARM_GAMES: usize = 20;
+
 fn log_event(app: &AppHandle, level: &str, message: &str) {
     let now = chrono_now_string();
     let _ = app.emit(
@@ -134,6 +136,49 @@ unsafe impl Send for JobObjectGuard {}
 #[cfg(windows)]
 unsafe impl Sync for JobObjectGuard {}
 
+/// Picks the fixed farm set. Games sharing an exe name can't run side by side,
+/// so duplicates are dropped here instead of spilling into a second batch.
+fn select_farm_games(
+    app: &AppHandle,
+    games: Vec<SpoofableGame>,
+    farm_game_ids: &[String],
+) -> Vec<SpoofableGame> {
+    let mut exe_basenames: HashSet<String> = HashSet::new();
+    let mut selected: Vec<SpoofableGame> = Vec::new();
+
+    for id in farm_game_ids {
+        if selected.len() >= MAX_FARM_GAMES {
+            break;
+        }
+        let Some(game) = games.iter().find(|g| &g.id == id) else {
+            continue;
+        };
+
+        if game.method == SpoofMethod::Process {
+            if let Some(rel) = &game.rel_path {
+                let exe_name = Path::new(rel)
+                    .file_name()
+                    .map(|s| s.to_string_lossy().to_lowercase())
+                    .unwrap_or_default();
+
+                if !exe_name.is_empty() && !exe_basenames.insert(exe_name.clone()) {
+                    let message = if is_russian() {
+                        format!("Фарм: '{}' пропущена, файл {} уже занят другой игрой.", game.name, exe_name)
+                    } else {
+                        format!("Farm: skipped '{}', {} is already used by another game.", game.name, exe_name)
+                    };
+                    log_event(app, "warn", &message);
+                    continue;
+                }
+            }
+        }
+
+        selected.push(game.clone());
+    }
+
+    selected
+}
+
 pub async fn run_spoofer(
     app: AppHandle,
     all_games: Vec<SpoofableGame>,
@@ -156,8 +201,11 @@ pub async fn run_spoofer(
             .collect(),
     };
 
+    let is_farm = !config.farm_game_ids.is_empty();
     let history = load_history();
-    let mut pool: Vec<SpoofableGame> = if config.skip_previously_spoofed {
+    let mut pool: Vec<SpoofableGame> = if is_farm {
+        select_farm_games(&app, mode_filtered_games, &config.farm_game_ids)
+    } else if config.skip_previously_spoofed {
         let before_count = mode_filtered_games.len();
         let filtered: Vec<SpoofableGame> = mode_filtered_games
             .into_iter()
@@ -185,31 +233,58 @@ pub async fn run_spoofer(
             SpooferStatusEvent {
                 status: SpooferStatus::Finished,
                 message: Some(
-                    pick(
-                        "Все доступные игры уже эмулированы согласно истории!",
-                        "All available games are already spoofed according to history!",
-                    )
+                    if is_farm {
+                        pick(
+                            "Выбранные для фарма игры недоступны.",
+                            "The games selected for farming are unavailable.",
+                        )
+                    } else {
+                        pick(
+                            "Все доступные игры уже эмулированы согласно истории!",
+                            "All available games are already spoofed according to history!",
+                        )
+                    }
                     .to_string(),
                 ),
             },
         );
-        log_event(
-            &app,
-            "success",
-            pick(
-                "Все игры уже были обработаны.",
-                "All games have already been processed.",
-            ),
-        );
+        if is_farm {
+            log_event(
+                &app,
+                "warn",
+                pick(
+                    "Выбранные для фарма игры недоступны.",
+                    "The games selected for farming are unavailable.",
+                ),
+            );
+        } else {
+            log_event(
+                &app,
+                "success",
+                pick(
+                    "Все игры уже были обработаны.",
+                    "All games have already been processed.",
+                ),
+            );
+        }
         return;
     }
 
-    let target_count = config
-        .limit
-        .map(|lim| lim.min(total_available))
-        .unwrap_or(total_available);
+    let target_count = if is_farm {
+        total_available
+    } else {
+        config
+            .limit
+            .map(|lim| lim.min(total_available))
+            .unwrap_or(total_available)
+    };
 
-    let batch_size = config.batch_size.clamp(1, 20);
+    // A farm is a single batch, so it never rotates to other games.
+    let batch_size = if is_farm {
+        total_available
+    } else {
+        config.batch_size.clamp(1, 20)
+    };
 
     // Initialize Win32 Job Object sandbox for orphan process protection
     #[cfg(windows)]
@@ -282,7 +357,13 @@ pub async fn run_spoofer(
         SpoofMode::RpcOnly => pick("Остальные (Discord IPC/RPC)", "Other (Discord IPC/RPC)"),
     };
 
-    let start_message = if is_russian() {
+    let start_message = if is_farm {
+        if is_russian() {
+            format!("Старт фарма: {} игр без смены.", target_count)
+        } else {
+            format!("Farm started: {} games with no rotation.", target_count)
+        }
+    } else if is_russian() {
         format!(
             "Старт mimic: режим {}, цель {} игр, батч {}, удержание {} сек",
             mode_str, target_count, batch_size, config.hold_duration_secs
@@ -558,7 +639,11 @@ pub async fn run_spoofer(
         } else {
             config.hold_duration_secs
         };
-        let hold_duration = Duration::from_secs(hold_secs.clamp(3, 3600));
+        let hold_duration = if is_farm {
+            config.farm_duration_secs.map(Duration::from_secs)
+        } else {
+            Some(Duration::from_secs(hold_secs.clamp(3, 3600)))
+        };
 
         // Emit spoofer tick event
         let elapsed_secs = start_time.elapsed().as_secs();
@@ -617,9 +702,44 @@ pub async fn run_spoofer(
 
         // Hold processes and RPC sessions for the duration
         let mut hold_start = Instant::now();
-        while hold_start.elapsed() < hold_duration {
+        let mut last_farm_tick = Instant::now();
+        while hold_duration.map_or(true, |limit| hold_start.elapsed() < limit) {
             if cancel_flag.load(Ordering::SeqCst) {
                 break;
+            }
+
+            // A farm can run for hours: keep the timer live and report games that died.
+            if is_farm && last_farm_tick.elapsed() >= Duration::from_secs(1) {
+                last_farm_tick = Instant::now();
+
+                spawned_processes.retain_mut(|(child, game, _)| {
+                    if matches!(child.try_wait(), Ok(Some(_))) {
+                        let message = if is_russian() {
+                            format!("Фарм: процесс '{}' завершился, часы по этой игре не идут.", game.name)
+                        } else {
+                            format!("Farm: the process for '{}' exited, this game is no longer counted.", game.name)
+                        };
+                        log_event(&app, "warn", &message);
+                        active_batch_info.retain(|info| info.id != game.id);
+                        false
+                    } else {
+                        true
+                    }
+                });
+
+                let held = hold_start.elapsed();
+                let _ = app.emit(
+                    "spoofer_tick",
+                    SpooferTickEvent {
+                        current_index: processed_count,
+                        total_games: target_count,
+                        active_batch: active_batch_info.clone(),
+                        elapsed_secs: held.as_secs(),
+                        estimated_remaining_secs: hold_duration
+                            .map_or(0, |limit| limit.saturating_sub(held).as_secs()),
+                        games_per_minute: 0.0,
+                    },
+                );
             }
 
             if pause_flag.load(Ordering::SeqCst) {
@@ -687,8 +807,8 @@ pub async fn run_spoofer(
             pids_guard.clear();
         }
 
-        // Record completed batch in persistent history
-        if !cancel_flag.load(Ordering::SeqCst) {
+        // Record completed batch in persistent history (farm games stay available for normal runs)
+        if !is_farm && !cancel_flag.load(Ordering::SeqCst) {
             let batch_ids: Vec<String> = current_batch.iter().map(|g| g.id.clone()).collect();
             record_played_batch(&batch_ids);
         }
@@ -755,7 +875,14 @@ pub async fn run_spoofer(
     );
 
     let total_elapsed = start_time.elapsed().as_secs();
-    if final_status == SpooferStatus::Finished {
+    if is_farm {
+        let message = if is_russian() {
+            format!("Фарм завершён: {} игр, {} сек.", processed_count, total_elapsed)
+        } else {
+            format!("Farm finished: {} games, {} sec.", processed_count, total_elapsed)
+        };
+        log_event(&app, "info", &message);
+    } else if final_status == SpooferStatus::Finished {
         let message = if is_russian() {
             format!(
                 "Эмуляция {} игр успешно завершена за {} сек! Прогресс сохранен в истории.",
