@@ -8,7 +8,8 @@ pub struct SpoofHistory {
     pub played_ids: HashSet<String>,
 }
 
-pub fn get_history_path() -> PathBuf {
+/// Per-user data folder for mimic (history, cached game database).
+pub fn get_app_dir() -> PathBuf {
     #[cfg(windows)]
     let base_dir = std::env::var("APPDATA")
         .map(PathBuf::from)
@@ -27,7 +28,11 @@ pub fn get_history_path() -> PathBuf {
 
     let app_dir = base_dir.join("mimic");
     let _ = fs::create_dir_all(&app_dir);
-    app_dir.join("history.json")
+    app_dir
+}
+
+pub fn get_history_path() -> PathBuf {
+    get_app_dir().join("history.json")
 }
 
 pub fn load_history() -> HashSet<String> {

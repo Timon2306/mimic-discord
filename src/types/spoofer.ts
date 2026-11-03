@@ -58,6 +58,8 @@ export interface FetchGamesResponse {
   rpc_count: number;
   history_process_count?: number;
   history_rpc_count?: number;
+  /** True when the games came from the saved copy instead of the Discord API. */
+  from_cache?: boolean;
 }
 
 export interface SpooferStateResponse {

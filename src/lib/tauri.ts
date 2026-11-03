@@ -32,8 +32,9 @@ export const tauriApi = {
     return invoke('stop_spoofer');
   },
 
-  fetchGames: (): Promise<FetchGamesResponse> => {
-    return invoke('fetch_games');
+  // force skips the cached copy and asks Discord for a fresh database
+  fetchGames: (force = false): Promise<FetchGamesResponse> => {
+    return invoke('fetch_games', { force });
   },
 
   getGamesList: (): Promise<SpoofableGameItem[]> => {

@@ -132,7 +132,7 @@ export const App: React.FC = () => {
 
           {activeTab === 'database' && (
             <DatabaseView
-              onRefresh={actions.fetchGames}
+              onRefresh={() => actions.fetchGames(true)}
               isFetching={isFetchingDatabase}
               historyCount={historyCount}
             />

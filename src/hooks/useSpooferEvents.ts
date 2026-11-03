@@ -190,17 +190,17 @@ export function useSpooferEvents() {
     }
   }, [addLog, t]);
 
-  const fetchGames = useCallback(async () => {
+  const fetchGames = useCallback(async (force = false) => {
     try {
       setIsFetchingDatabase(true);
       addLog('info', t('logs.fetching'));
-      const res = await tauriApi.fetchGames();
+      const res = await tauriApi.fetchGames(force);
       setTotalDatabaseGames(res.total);
       setProcessGamesCount(res.process_count);
       setRpcGamesCount(res.rpc_count);
       addLog(
         'success',
-        t('logs.fetched', {
+        t(res.from_cache ? 'logs.fetchedCache' : 'logs.fetched', {
           total: formatNumber(res.total),
           process: formatNumber(res.process_count),
           rpc: formatNumber(res.rpc_count),

@@ -175,6 +175,8 @@ const en = {
   // Runtime logs emitted by the frontend
   'logs.fetching': 'Loading the official Discord games database...',
   'logs.fetched': 'Database updated: {total} games total ({process} native processes + {rpc} Discord RPC).',
+  'logs.fetchedCache':
+    'Saved database loaded: {total} games total ({process} native processes + {rpc} Discord RPC).',
   'logs.fetchFailed': 'Database load failed: {error}',
   'logs.historyCleared': 'Spoofed games history cleared.',
   'logs.historyClearFailed': 'Failed to clear history: {error}',
@@ -354,6 +356,8 @@ const ru: Record<MessageKey, string> = {
   'logs.fetching': 'Загрузка официальной базы игр Discord...',
   'logs.fetched':
     'База обновлена: всего {total} игр ({process} нативных процессов + {rpc} Discord RPC).',
+  'logs.fetchedCache':
+    'Загружена сохранённая база: всего {total} игр ({process} нативных процессов + {rpc} Discord RPC).',
   'logs.fetchFailed': 'Ошибка загрузки базы: {error}',
   'logs.historyCleared': 'История эмулированных игр очищена.',
   'logs.historyClearFailed': 'Ошибка очистки истории: {error}',

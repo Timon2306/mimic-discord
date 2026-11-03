@@ -1,5 +1,19 @@
+use crate::history::get_app_dir;
+use crate::i18n::is_russian;
+use crate::spoofer::log_event;
+use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
+use std::fs;
 use std::path::{Path, PathBuf};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use tauri::AppHandle;
+
+const DETECTABLE_URL: &str = "https://discord.com/api/v9/applications/detectable";
+/// A fresh cached copy is used on startup instead of hitting the Discord API again.
+const CACHE_TTL_SECS: u64 = 12 * 60 * 60;
+const MAX_FETCH_ATTEMPTS: u32 = 3;
+/// Longer rate limits are not waited out: the cached copy (if any) is used instead.
+const MAX_RETRY_WAIT_SECS: u64 = 30;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -84,18 +98,138 @@ fn sanitize_relative_path(raw_name: &str) -> Option<PathBuf> {
     Some(clean_buf)
 }
 
+#[derive(Serialize, Deserialize)]
+struct GamesCache {
+    fetched_at: u64,
+    games: Vec<SpoofableGame>,
+}
+
+fn unix_now() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs()
+}
+
+fn cache_path() -> PathBuf {
+    get_app_dir().join("games_cache.json")
+}
+
+fn load_cache() -> Option<GamesCache> {
+    let data = fs::read_to_string(cache_path()).ok()?;
+    let cache: GamesCache = serde_json::from_str(&data).ok()?;
+    if cache.games.is_empty() {
+        return None;
+    }
+    Some(cache)
+}
+
+fn save_cache(games: &[SpoofableGame]) {
+    let cache = GamesCache {
+        fetched_at: unix_now(),
+        games: games.to_vec(),
+    };
+    if let Ok(json) = serde_json::to_string(&cache) {
+        let _ = fs::write(cache_path(), json);
+    }
+}
+
+/// Loads the games database. Uses the cached copy while it is fresh (unless
+/// `force_refresh`), and falls back to it when Discord refuses the request.
+/// Returns the games and whether they came from the cache.
+pub async fn load_games(
+    app: &AppHandle,
+    force_refresh: bool,
+) -> Result<(Vec<SpoofableGame>, bool), String> {
+    let cache = load_cache();
+
+    if !force_refresh {
+        if let Some(cache) = &cache {
+            if unix_now().saturating_sub(cache.fetched_at) < CACHE_TTL_SECS {
+                return Ok((cache.games.clone(), true));
+            }
+        }
+    }
+
+    match fetch_detectable_applications(app).await {
+        Ok(games) => {
+            save_cache(&games);
+            Ok((games, false))
+        }
+        Err(err) => {
+            let Some(cache) = cache else {
+                return Err(err);
+            };
+            let hours = unix_now().saturating_sub(cache.fetched_at) / 3600;
+            let message = if is_russian() {
+                format!(
+                    "{} Используется сохранённая база ({} ч назад).",
+                    err, hours
+                )
+            } else {
+                format!("{} Using the saved database ({} h old).", err, hours)
+            };
+            log_event(app, "warn", &message);
+            Ok((cache.games, true))
+        }
+    }
+}
+
+fn retry_after_secs(response: &reqwest::Response) -> Option<u64> {
+    let raw = response.headers().get("retry-after")?.to_str().ok()?;
+    let secs: f64 = raw.trim().parse().ok()?;
+    Some(secs.ceil().max(1.0) as u64)
+}
+
 /// Fetches Discord detectable applications database and returns all games categorized
-pub async fn fetch_detectable_applications() -> Result<Vec<SpoofableGame>, String> {
+pub async fn fetch_detectable_applications(app: &AppHandle) -> Result<Vec<SpoofableGame>, String> {
     let client = reqwest::Client::builder()
         .user_agent("mimic-discord-agent/2.0")
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
 
-    let response = client
-        .get("https://discord.com/api/v9/applications/detectable")
-        .send()
-        .await
-        .map_err(|e| format!("Network error querying Discord API: {}", e))?;
+    let mut attempt = 0;
+    let response = loop {
+        attempt += 1;
+        let response = client
+            .get(DETECTABLE_URL)
+            .send()
+            .await
+            .map_err(|e| format!("Network error querying Discord API: {}", e))?;
+
+        if response.status() != StatusCode::TOO_MANY_REQUESTS {
+            break response;
+        }
+
+        let wait_secs = retry_after_secs(&response).unwrap_or(5);
+        if attempt >= MAX_FETCH_ATTEMPTS || wait_secs > MAX_RETRY_WAIT_SECS {
+            return Err(if is_russian() {
+                format!(
+                    "Discord временно ограничил запросы (429). Попробуйте обновить базу через {} сек.",
+                    wait_secs
+                )
+            } else {
+                format!(
+                    "Discord is rate limiting requests (429). Try refreshing the database in {} sec.",
+                    wait_secs
+                )
+            });
+        }
+
+        let message = if is_russian() {
+            format!(
+                "Discord ограничил запросы (429), повтор через {} сек ({}/{})...",
+                wait_secs, attempt, MAX_FETCH_ATTEMPTS
+            )
+        } else {
+            format!(
+                "Discord rate limited the request (429), retrying in {} sec ({}/{})...",
+                wait_secs, attempt, MAX_FETCH_ATTEMPTS
+            )
+        };
+        log_event(app, "warn", &message);
+        tokio::time::sleep(Duration::from_secs(wait_secs)).await;
+    };
 
     if !response.status().is_success() {
         return Err(format!(

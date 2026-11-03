@@ -23,7 +23,7 @@ static DUMMY_EXE_BYTES: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/dummy"
 
 const MAX_FARM_GAMES: usize = 20;
 
-fn log_event(app: &AppHandle, level: &str, message: &str) {
+pub(crate) fn log_event(app: &AppHandle, level: &str, message: &str) {
     let now = chrono_now_string();
     let _ = app.emit(
         "spoofer_log",

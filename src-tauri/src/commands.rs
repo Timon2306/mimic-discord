@@ -1,4 +1,4 @@
-use crate::discord::{fetch_detectable_applications, is_discord_running, SpoofMethod};
+use crate::discord::{is_discord_running, load_games, SpoofMethod};
 use crate::history::{clear_history as clear_history_fs, load_history, save_history};
 use crate::spoofer::{force_kill_pid, run_spoofer};
 use crate::state::{AppState, FetchProgressEvent, SpooferConfig, SpooferStatus};
@@ -13,6 +13,7 @@ pub struct FetchGamesResponse {
     pub rpc_count: usize,
     pub history_process_count: usize,
     pub history_rpc_count: usize,
+    pub from_cache: bool,
 }
 
 #[derive(Serialize)]
@@ -28,6 +29,7 @@ pub struct SpooferStateResponse {
 
 #[tauri::command]
 pub async fn fetch_games(
+    force: Option<bool>,
     state: State<'_, AppState>,
     app: AppHandle,
 ) -> Result<FetchGamesResponse, String> {
@@ -43,7 +45,7 @@ pub async fn fetch_games(
         },
     );
 
-    let games = fetch_detectable_applications().await?;
+    let (games, from_cache) = load_games(&app, force.unwrap_or(false)).await?;
     let history = load_history();
     let total = games.len();
     let process_count = games.iter().filter(|g| g.method == SpoofMethod::Process).count();
@@ -80,6 +82,7 @@ pub async fn fetch_games(
         rpc_count,
         history_process_count,
         history_rpc_count,
+        from_cache,
     })
 }
 
