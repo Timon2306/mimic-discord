@@ -420,11 +420,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="pt-3 border-t border-white/5 space-y-1 text-xs">
             <div className="flex justify-between items-center">
               <span className="text-neutral-400">{t('dashboard.succeeded')}</span>
-              <span className="font-mono font-medium text-white">{formatNumber(currentDone)}</span>
+              <span className="font-mono font-medium text-white">
+                {formatNumber(tickData.succeeded_count ?? currentDone)}
+              </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-neutral-400">{t('dashboard.errors')}</span>
-              <span className="font-mono font-medium text-white">0</span>
+              <span
+                className={`font-mono font-medium ${
+                  (tickData.failed_count ?? 0) > 0 ? 'text-red-400' : 'text-white'
+                }`}
+              >
+                {formatNumber(tickData.failed_count ?? 0)}
+              </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-neutral-400">{t('dashboard.timeLeft')}</span>

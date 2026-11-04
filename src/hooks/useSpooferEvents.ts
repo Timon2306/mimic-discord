@@ -22,6 +22,8 @@ export function useSpooferEvents() {
     elapsed_secs: 0,
     estimated_remaining_secs: 0,
     games_per_minute: 0,
+    succeeded_count: 0,
+    failed_count: 0,
   });
 
   const [logs, setLogs] = useState<SpooferLogEvent[]>([]);
@@ -36,15 +38,13 @@ export function useSpooferEvents() {
   const logIdCounter = useRef(0);
 
   const addLog = useCallback(
-    (level: SpooferLogEvent['level'], message: string, timestamp?: string) => {
-      const time =
-        timestamp ||
-        new Date().toLocaleTimeString('en-US', {
-          hour12: false,
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-        });
+    (level: SpooferLogEvent['level'], message: string) => {
+      const time = new Date().toLocaleTimeString('en-US', {
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      });
       logIdCounter.current += 1;
       const newLog: SpooferLogEvent = {
         id: `log-${Date.now()}-${logIdCounter.current}`,
@@ -82,7 +82,7 @@ export function useSpooferEvents() {
         });
 
         unlistenLog = await tauriApi.onLog((payload) => {
-          addLog(payload.level, payload.message, payload.timestamp);
+          addLog(payload.level, payload.message);
         });
 
         unlistenStatus = await tauriApi.onStatus((payload) => {

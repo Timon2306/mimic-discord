@@ -81,8 +81,9 @@ export const tauriApi = {
     return listen<SpooferTickEvent>('spoofer_tick', (e) => cb(e.payload));
   },
 
-  onLog: (cb: (payload: Omit<SpooferLogEvent, 'id'>) => void): Promise<UnlistenFn> => {
-    return listen<Omit<SpooferLogEvent, 'id'>>('spoofer_log', (e) => cb(e.payload));
+  // Backend logs carry no time; the UI stamps them with the PC's local time
+  onLog: (cb: (payload: Omit<SpooferLogEvent, 'id' | 'timestamp'>) => void): Promise<UnlistenFn> => {
+    return listen<Omit<SpooferLogEvent, 'id' | 'timestamp'>>('spoofer_log', (e) => cb(e.payload));
   },
 
   onStatus: (cb: (payload: SpooferStatusEvent) => void): Promise<UnlistenFn> => {

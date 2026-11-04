@@ -14,6 +14,8 @@ const CACHE_TTL_SECS: u64 = 12 * 60 * 60;
 const MAX_FETCH_ATTEMPTS: u32 = 3;
 /// Longer rate limits are not waited out: the cached copy (if any) is used instead.
 const MAX_RETRY_WAIT_SECS: u64 = 30;
+/// Bump when the processed game format changes so stale caches are refetched.
+const CACHE_VERSION: u32 = 1;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -56,7 +58,8 @@ pub struct SpoofableGame {
 
 /// Normalizes executable name to a safe relative path for the host OS
 fn sanitize_relative_path(raw_name: &str) -> Option<PathBuf> {
-    let trimmed = raw_name.trim();
+    // Discord marks some entries with '>' ("match the file name only"); it is not part of the path
+    let trimmed = raw_name.trim().trim_start_matches('>').trim();
     if trimmed.is_empty() {
         return None;
     }
@@ -75,7 +78,16 @@ fn sanitize_relative_path(raw_name: &str) -> Option<PathBuf> {
     for component in path.components() {
         match component {
             std::path::Component::Normal(part) => {
-                clean_buf.push(part);
+                // Drop characters Windows rejects in file names (os error 123)
+                let part: String = part
+                    .to_string_lossy()
+                    .chars()
+                    .filter(|c| !matches!(c, '<' | '>' | ':' | '"' | '|' | '?' | '*') && !c.is_control())
+                    .collect();
+                let part = part.trim_end_matches(|c| c == '.' || c == ' ');
+                if !part.is_empty() {
+                    clean_buf.push(part);
+                }
             }
             _ => {
                 // Ignore root, prefix, or parent dir components for safety
@@ -100,6 +112,8 @@ fn sanitize_relative_path(raw_name: &str) -> Option<PathBuf> {
 
 #[derive(Serialize, Deserialize)]
 struct GamesCache {
+    #[serde(default)]
+    version: u32,
     fetched_at: u64,
     games: Vec<SpoofableGame>,
 }
@@ -118,7 +132,7 @@ fn cache_path() -> PathBuf {
 fn load_cache() -> Option<GamesCache> {
     let data = fs::read_to_string(cache_path()).ok()?;
     let cache: GamesCache = serde_json::from_str(&data).ok()?;
-    if cache.games.is_empty() {
+    if cache.version != CACHE_VERSION || cache.games.is_empty() {
         return None;
     }
     Some(cache)
@@ -126,6 +140,7 @@ fn load_cache() -> Option<GamesCache> {
 
 fn save_cache(games: &[SpoofableGame]) {
     let cache = GamesCache {
+        version: CACHE_VERSION,
         fetched_at: unix_now(),
         games: games.to_vec(),
     };

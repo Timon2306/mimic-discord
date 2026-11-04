@@ -225,6 +225,8 @@ pub async fn stop_spoofer(
             elapsed_secs: 0,
             estimated_remaining_secs: 0,
             games_per_minute: 0.0,
+            succeeded_count: 0,
+            failed_count: 0,
         },
     );
 

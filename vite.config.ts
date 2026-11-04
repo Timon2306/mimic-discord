@@ -15,6 +15,8 @@ export default defineConfig({
   clearScreen: false,
   // tauri expects a fixed port, fail if that port is not available
   server: {
+    // localhost can resolve to IPv6 only on Windows, so bind IPv4 explicitly
+    host: '127.0.0.1',
     port: 1420,
     strictPort: true,
     watch: {

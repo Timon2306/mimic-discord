@@ -29,6 +29,10 @@ export interface SpooferTickEvent {
   elapsed_secs: number;
   estimated_remaining_secs: number;
   games_per_minute: number;
+  /** Games that launched in this run. */
+  succeeded_count?: number;
+  /** Games that failed to launch in this run. */
+  failed_count?: number;
 }
 
 export interface SpooferLogEvent {

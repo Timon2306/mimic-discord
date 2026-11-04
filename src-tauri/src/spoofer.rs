@@ -23,27 +23,15 @@ static DUMMY_EXE_BYTES: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/dummy"
 
 const MAX_FARM_GAMES: usize = 20;
 
+/// Log lines carry no timestamp: the UI stamps them with the PC's local time on arrival.
 pub(crate) fn log_event(app: &AppHandle, level: &str, message: &str) {
-    let now = chrono_now_string();
     let _ = app.emit(
         "spoofer_log",
         SpooferLogEvent {
-            timestamp: now,
             level: level.to_string(),
             message: message.to_string(),
         },
     );
-}
-
-fn chrono_now_string() -> String {
-    let now = SystemTime::now();
-    let duration = now.duration_since(UNIX_EPOCH).unwrap_or_default();
-    let secs = duration.as_secs();
-    let sec_in_day = secs % 86400;
-    let hours = sec_in_day / 3600;
-    let mins = (sec_in_day % 3600) / 60;
-    let s = sec_in_day % 60;
-    format!("{:02}:{:02}:{:02}", hours, mins, s)
 }
 
 fn cleanup_temp_dir(temp_dir: &Path) {
@@ -378,6 +366,8 @@ pub async fn run_spoofer(
 
     let start_time = Instant::now();
     let mut processed_count = 0usize;
+    let mut succeeded_count = 0usize;
+    let mut failed_count = 0usize;
     let mut batch_counter = 0usize;
 
     while processed_count < target_count && !pool.is_empty() {
@@ -564,6 +554,7 @@ pub async fn run_spoofer(
                 match cmd.spawn() {
                     Ok(child) => {
                         let pid = child.id();
+                        succeeded_count += 1;
 
                         #[cfg(windows)]
                         if let Some(guard) = &job_guard {
@@ -586,6 +577,7 @@ pub async fn run_spoofer(
                         spawned_processes.push((child, game.clone(), target_exe_path));
                     }
                     Err(e) => {
+                        failed_count += 1;
                         let message = if is_russian() {
                             format!("Не удалось запустить процесс '{}': {}", game.name, e)
                         } else {
@@ -600,6 +592,7 @@ pub async fn run_spoofer(
                     Ok(mut session) => {
                         let current_pid = std::process::id();
                         if let Err(e) = session.set_activity(&game.name, batch_start_ms, current_pid).await {
+                            failed_count += 1;
                             let message = if is_russian() {
                                 format!("Ошибка установки RPC для '{}': {}", game.name, e)
                             } else {
@@ -607,6 +600,7 @@ pub async fn run_spoofer(
                             };
                             log_event(&app, "warn", &message);
                         } else {
+                            succeeded_count += 1;
                             active_batch_info.push(ActiveGameInfo {
                                 id: game.id.clone(),
                                 name: game.name.clone(),
@@ -619,6 +613,7 @@ pub async fn run_spoofer(
                         }
                     }
                     Err(e) => {
+                        failed_count += 1;
                         let message = if is_russian() {
                             format!("RPC пайп недоступен для '{}': {}", game.name, e)
                         } else {
@@ -669,6 +664,8 @@ pub async fn run_spoofer(
                 elapsed_secs,
                 estimated_remaining_secs,
                 games_per_minute: games_per_sec * 60.0,
+                succeeded_count,
+                failed_count,
             },
         );
 
@@ -738,6 +735,8 @@ pub async fn run_spoofer(
                         estimated_remaining_secs: hold_duration
                             .map_or(0, |limit| limit.saturating_sub(held).as_secs()),
                         games_per_minute: 0.0,
+                        succeeded_count,
+                        failed_count,
                     },
                 );
             }
@@ -809,7 +808,8 @@ pub async fn run_spoofer(
 
         // Record completed batch in persistent history (farm games stay available for normal runs)
         if !is_farm && !cancel_flag.load(Ordering::SeqCst) {
-            let batch_ids: Vec<String> = current_batch.iter().map(|g| g.id.clone()).collect();
+            // Games that failed to start are left out so they are retried next time
+            let batch_ids: Vec<String> = active_batch_info.iter().map(|g| g.id.clone()).collect();
             record_played_batch(&batch_ids);
         }
 
@@ -849,6 +849,8 @@ pub async fn run_spoofer(
                 elapsed_secs,
                 estimated_remaining_secs,
                 games_per_minute: games_per_sec * 60.0,
+                succeeded_count,
+                failed_count,
             },
         );
 

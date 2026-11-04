@@ -41,11 +41,12 @@ pub struct SpooferTickEvent {
     pub elapsed_secs: u64,
     pub estimated_remaining_secs: u64,
     pub games_per_minute: f64,
+    pub succeeded_count: usize,
+    pub failed_count: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpooferLogEvent {
-    pub timestamp: String,
     pub level: String, // "info" | "success" | "warn" | "error"
     pub message: String,
 }
