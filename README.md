@@ -1,110 +1,138 @@
 # mimic
 
+[English](README.en.md) · **Русский**
+
 <div align="center">
-  <img src="mimic.png" width="128" height="128" alt="mimic logo" />
-  <p><strong>Lightweight desktop Discord game activity spoofer & badge booster</strong></p>
-  <p>Boost your Discord profile <b>Game Variety (Универсал)</b> and <b>Game Time (Время в играх)</b> badges natively on Windows & Linux.</p>
+  <img src="mimic.png" width="128" height="128" alt="логотип mimic" />
+  <p><strong>Лёгкое десктопное приложение для эмуляции игровой активности в Discord и прокачки значков</strong></p>
+  <p>Прокачивает значки профиля Discord <b>«Универсал» (Game Variety)</b> и <b>«Время в играх» (Game Time)</b> на Windows и Linux.</p>
   <br />
-  <img src="proof.png" width="300" alt="Mythic Game Variety Badge Proof (9,837 games)" />
-  <p><sub>Mythic «Универсал» badge unlocked with 9,837 games via mimic</sub></p>
+  <img src="proof.png" width="300" alt="Мифический значок «Универсал» (9 837 игр)" />
+  <p><sub>Мифический значок «Универсал», полученный с mimic на 9 837 играх</sub></p>
 </div>
 
 ---
 
-## ✨ Features
+<a id="download"></a>
 
-- **🏆 Game Variety Badge Booster**: Rapidly cycles through verified Discord titles in parallel batches (e.g. 8 games with 15s hold). Tested and proven to unlock the Mythic **Универсал** badge (9,800+ games).
-- **⏱️ Game Time Multiplier**: Running multiple games concurrently multiplies your Discord gameplay tracking hours (e.g. 8 games × 5 hours = 40 hours credited).
-- **🐧 Multiplatform Support**: Runs natively on both **Windows** (Win32 dummy process window emulation) and **Linux** (`prctl`/`/proc/self/comm` emulation). Note: Discord's database is heavily Windows-oriented — on Linux only **8** games have a native executable, see [Known Limitations](#-disclaimer--known-limitations).
-- **🛡️ 100% Safe & Native**: Zero token extraction, zero memory injection, zero Discord client modifications. Discord naturally detects running games via official OS process inspection APIs.
-- **⚡ Background Process Emulation**: Lightweight dummy engine creating legitimate application processes without stealing focus or interrupting your work.
-- **🧹 Zero Residual Disk Footprint**: Instant per-batch cleanup ensuring temporary files are immediately removed from disk, preventing Discord settings cache bloat.
-- **💾 Smart History & State**: Persistent cache (`history.json`) skips already spoofed games across sessions so you never repeat entries.
+## ⬇️ Что скачать (терминал не нужен)
 
----
+**👉 [Скачать последнюю версию](https://github.com/Timon2306/mimic-discord/releases/latest)**, затем внизу страницы откройте раздел **Assets**.
 
-## 🎮 How It Works
+| Ваша система | Какой файл скачать |
+| --- | --- |
+| Windows (проще всего) | `mimic_<версия>_x64_portable.exe`: скачал и запустил, установка не нужна |
+| Windows (установщик) | `mimic_<версия>_x64-setup.exe`: ставит ярлыки в меню «Пуск» и на рабочий стол |
+| Linux | `mimic_<версия>_amd64.AppImage` (`chmod +x` и запустить) или `mimic_<версия>_amd64.deb` |
 
-Discord tracks two badges for desktop gamers:
-
-1. **Game Variety (Разные игры — Универсал)**:
-   - Tracks unique PC titles played over time.
-   - Cycles through Discord's official database of 10,000+ detectable applications.
-   - Recommended setting: **Batch Size: 8**, **Hold Duration: 15s**.
-   - *Note: Discord servers process badge telemetry in batch intervals (up to 24h delay).*
-
-2. **Game Time (Время в играх)**:
-   - Tracks total playtime hours.
-   - Running parallel dummy processes multiplies tracked hours (e.g. 8x boost).
-   - Use the **Hour farm** tab: pick up to 20 games and they keep running without rotating until you stop them or the timer ends.
+- **Не качайте** `Source code (zip)`: это исходный код, а не программа.
+- **Не нужны** Node.js, Rust и никакие команды в терминале. Это только для разработчиков (см. [Сборка из исходников](#build)).
+- Перед mimic запустите **приложение Discord для ПК** (браузерная версия не подойдёт).
+- Если Windows пишет «Система Windows защитила ваш компьютер», нажмите **Подробнее → Выполнить в любом случае**. Программа не подписана сертификатом, поэтому SmartScreen её предупреждает.
 
 ---
 
-## 🛠️ Tech Stack
+## ✨ Возможности
 
-- **Backend**: Rust, [Tauri v2](https://v2.tauri.app/), Tokio, Reqwest, Windows API (`windows-sys`), Linux (`libc`)
-- **Frontend**: React, TypeScript, Vite, Tailwind CSS
+- **🏆 Прокачка «Универсала»**: быстро перебирает проверенные игры из базы Discord параллельными батчами (например, по 8 игр на 15 секунд). Проверено: мифический значок **«Универсал»** открывается (9 800+ игр).
+- **⏱️ Умножение «Времени в играх»**: несколько игр, запущенных одновременно, умножают часы в Discord (например, 8 игр × 5 часов = 40 часов).
+- **⏳ Фарм часов**: отдельная вкладка, где выбранные игры (до 20) работают вместе и не меняются, пока вы их не остановите или не выйдет таймер.
+- **🐧 Windows и Linux**: на **Windows** создаются фоновые окна-пустышки Win32, на **Linux** меняется имя процесса (`prctl`/`/proc/self/comm`). База Discord почти целиком под Windows: на Linux нативный файл есть только у **8** игр, см. [Ограничения](#limitations).
+- **🛡️ Безопасно и без модификаций**: токен не нужен, ничего не внедряется в память, клиент Discord не меняется. Discord сам видит запущенные игры через стандартный список процессов ОС.
+- **⚡ Работает в фоне**: процессы-пустышки не перехватывают фокус и не мешают работать.
+- **🧹 Не мусорит на диске**: временные файлы удаляются сразу после каждого батча.
+- **💾 История запусков**: файл `history.json` помнит, какие игры уже были, и пропускает их в следующих сессиях.
 
 ---
 
-## 🚀 Quick Start
+## 🎮 Как это работает
 
-### Prerequisites
+Discord считает два значка за игры на ПК:
+
+1. **«Универсал» (Game Variety)**:
+   - Считает, сколько разных игр на ПК вы запускали.
+   - mimic перебирает официальную базу Discord из 10 000+ распознаваемых игр.
+   - Рекомендуемые настройки: **8 параллельных процессов**, **15 секунд** удержания.
+   - *Discord обновляет значки не сразу, задержка бывает до 24 часов.*
+
+2. **«Время в играх» (Game Time)**:
+   - Считает общее количество часов в играх.
+   - Параллельные процессы умножают часы (например, в 8 раз).
+   - Используйте вкладку **«Фарм часов»**: выберите до 20 игр, и они будут работать без смены, пока вы их не остановите или не выйдет таймер.
+
+---
+
+## 🛠️ Технологии
+
+- **Бэкенд**: Rust, [Tauri v2](https://v2.tauri.app/), Tokio, Reqwest, Windows API (`windows-sys`), Linux (`libc`)
+- **Фронтенд**: React, TypeScript, Vite, Tailwind CSS
+
+---
+
+<a id="build"></a>
+
+## 🧑‍💻 Сборка из исходников
+
+> Только для разработчиков. Если нужно просто пользоваться программой, [скачайте готовую версию](#download).
+
+### Что понадобится
 
 - [Node.js](https://nodejs.org/) (v18+)
 - [Rust](https://rustup.rs/) (v1.75+)
-- [Discord Desktop Client](https://discord.com/)
+- [Discord для ПК](https://discord.com/)
 
-### Installation & Run
+### Установка и запуск
 
 ```bash
-# Clone the repository
+# Скачать репозиторий
 git clone https://github.com/Timon2306/mimic-discord.git
 cd mimic-discord
 
-# Install dependencies
+# Установить зависимости
 npm install
 
-# Run in development mode
+# Запустить в режиме разработки
 npm run tauri dev
 ```
 
-### Production Build
+### Сборка релиза
 
 ```bash
-# Build standalone installer & executable
+# Собрать установщик и exe
 npm run tauri build
 ```
 
-Compiled standalone binaries:
-- Windows: `src-tauri/target/release/bundle/nsis/` & `src-tauri/target/release/mimic.exe`
-- Linux: `src-tauri/target/release/bundle/appimage/` & `src-tauri/target/release/bundle/deb/`
+Готовые файлы:
+- Windows: `src-tauri/target/release/bundle/nsis/` и `src-tauri/target/release/mimic.exe`
+- Linux: `src-tauri/target/release/bundle/appimage/` и `src-tauri/target/release/bundle/deb/`
 
-### Release assets
+### Файлы в релизе
 
-Every release ships four files:
+В каждом релизе четыре файла:
 
-| Platform | File | Notes |
+| Система | Файл | Описание |
 | --- | --- | --- |
-| Windows | `mimic_<version>_x64-setup.exe` | NSIS installer (Start Menu + desktop shortcut) |
-| Windows | `mimic_<version>_x64_portable.exe` | Single portable exe — download and run, no installation |
-| Linux | `mimic_<version>_amd64.AppImage` | Portable, `chmod +x` and run |
-| Linux | `mimic_<version>_amd64.deb` | Debian/Ubuntu package |
+| Windows | `mimic_<версия>_x64-setup.exe` | Установщик NSIS (ярлыки в «Пуске» и на рабочем столе) |
+| Windows | `mimic_<версия>_x64_portable.exe` | Один exe без установки: скачал и запустил |
+| Linux | `mimic_<версия>_amd64.AppImage` | Без установки: `chmod +x` и запустить |
+| Linux | `mimic_<версия>_amd64.deb` | Пакет для Debian/Ubuntu |
 
-The portable Windows build is the very same binary as the installed one — it just is not wrapped in an installer. It still needs the WebView2 runtime, which ships with Windows 10/11 by default.
-
----
-
-## ⚠️ Disclaimer & Known Limitations
-
-- **Badge results are not guaranteed.** Discord decides what counts, so going past the verified numbers below may not progress the badge any further.
-- **Tested on Windows only**, with Discord games tracked up to **~10,000 games in the badge** (Mythic «Универсал»).
-- **Linux: native mode covers only 8 games.** Discord's public detectable database contains just eight Linux executables — Hearts of Iron IV, Factorio, Throne of Lies, VA-11 HALL-A, Fields of Mistria, CS:GO, Move or Die and Terraria — so process-based spoofing cannot go past them. Wine/Proton does not help: those Windows titles exist only as `win32` entries, and the Linux Discord client does not match their processes. The remaining ~24,900 titles are available only through the beta Discord RPC mode, which Discord may not credit to your profile at all.
-- A target of **24,000 games is unverified** — it may work, may be throttled, or may have no effect at all.
-- Game activity spoofing is not officially supported by Discord. Use it at your own risk.
+Portable-версия для Windows — это тот же exe, что ставит установщик, просто без установщика. Ей нужен WebView2, он уже есть в Windows 10/11.
 
 ---
 
-## 📄 License
+<a id="limitations"></a>
 
-This project is licensed under the [MIT License](LICENSE).
+## ⚠️ Предупреждение и ограничения
+
+- **Результат не гарантирован.** Что засчитывать, решает Discord, поэтому выше проверенных чисел значок может не расти.
+- **Проверено только на Windows**, до **~10 000 игр в значке** (мифический «Универсал»).
+- **Linux: нативный режим работает только с 8 играми.** В публичной базе Discord всего восемь игр с файлом для Linux: Hearts of Iron IV, Factorio, Throne of Lies, VA-11 HALL-A, Fields of Mistria, CS:GO, Move or Die и Terraria. Wine/Proton не помогает: остальные игры есть в базе только как `win32`, и Discord для Linux их процессы не распознаёт. Остальные ~24 900 игр доступны только через бета-режим Discord RPC, который Discord может вообще не засчитать.
+- Цель в **24 000 игр не проверена**: может сработать, может упереться в ограничения, а может ни на что не повлиять.
+- Discord официально не поддерживает эмуляцию игровой активности. Используйте на свой риск.
+
+---
+
+## 📄 Лицензия
+
+Проект распространяется по [лицензии MIT](LICENSE).
