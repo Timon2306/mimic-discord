@@ -218,6 +218,8 @@ export function useSpooferEvents() {
     try {
       await tauriApi.clearHistory();
       setHistoryCount(0);
+      setHistoryProcessCount(0);
+      setHistoryRpcCount(0);
       addLog('info', t('logs.historyCleared'));
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -248,6 +250,12 @@ export function useSpooferEvents() {
         const added = await tauriApi.importHistory(jsonData);
         const state = await tauriApi.getSpooferState();
         setHistoryCount(state.history_count);
+        if (state.history_process_count !== undefined) {
+          setHistoryProcessCount(state.history_process_count);
+        }
+        if (state.history_rpc_count !== undefined) {
+          setHistoryRpcCount(state.history_rpc_count);
+        }
         addLog('success', t('logs.historyImported', { count: formatNumber(added) }));
         return added;
       } catch (e) {
