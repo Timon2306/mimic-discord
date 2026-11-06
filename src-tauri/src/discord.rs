@@ -15,7 +15,7 @@ const MAX_FETCH_ATTEMPTS: u32 = 3;
 /// Longer rate limits are not waited out: the cached copy (if any) is used instead.
 const MAX_RETRY_WAIT_SECS: u64 = 30;
 /// Bump when the processed game format changes so stale caches are refetched.
-const CACHE_VERSION: u32 = 1;
+const CACHE_VERSION: u32 = 2;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -44,6 +44,27 @@ pub struct RawDetectableApp {
     pub aliases: Vec<String>,
     #[serde(default)]
     pub executables: Vec<RawExecutableEntry>,
+    #[serde(default)]
+    pub themes: Vec<String>,
+    #[serde(default)]
+    pub content_classification: Option<serde_json::Value>,
+}
+
+/// ESRB "Adults Only" rating code in Discord's content classification.
+const ESRB_ADULTS_ONLY: u64 = 5;
+
+impl RawDetectableApp {
+    /// 18+ games: tagged "Erotic" or rated ESRB Adults Only by Discord.
+    fn is_adult(&self) -> bool {
+        if self.themes.iter().any(|t| t.eq_ignore_ascii_case("erotic")) {
+            return true;
+        }
+        self.content_classification
+            .as_ref()
+            .and_then(|c| c.pointer("/agency_ratings/esrb/rating"))
+            .and_then(|r| r.as_u64())
+            == Some(ESRB_ADULTS_ONLY)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -54,6 +75,8 @@ pub struct SpoofableGame {
     pub arguments: Option<String>,
     pub icon_hash: Option<String>,
     pub method: SpoofMethod,
+    #[serde(default)]
+    pub adult: bool,
 }
 
 /// Normalizes executable name to a safe relative path for the host OS
@@ -269,6 +292,7 @@ pub async fn fetch_detectable_applications(app: &AppHandle) -> Result<Vec<Spoofa
     };
 
     for app in raw_apps {
+        let adult = app.is_adult();
         // Find best candidate executable for the current target OS ONLY
         let candidates: Vec<&RawExecutableEntry> = app
             .executables
@@ -292,6 +316,7 @@ pub async fn fetch_detectable_applications(app: &AppHandle) -> Result<Vec<Spoofa
                     arguments: best_exe.arguments.clone(),
                     icon_hash: app.icon_hash,
                     method: SpoofMethod::Process,
+                    adult,
                 });
                 continue;
             }
@@ -305,6 +330,7 @@ pub async fn fetch_detectable_applications(app: &AppHandle) -> Result<Vec<Spoofa
             arguments: None,
             icon_hash: app.icon_hash,
             method: SpoofMethod::Rpc,
+            adult,
         });
     }
 

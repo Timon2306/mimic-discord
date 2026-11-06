@@ -11,10 +11,20 @@ import { useSpooferEvents } from '@/hooks/useSpooferEvents';
 import { useStarPrompt } from '@/hooks/useStarPrompt';
 import type { SpooferConfig } from '@/types/spoofer';
 
+const EXCLUDE_ADULT_KEY = 'mimic.exclude_adult';
+
+function readExcludeAdult(): boolean {
+  try {
+    return localStorage.getItem(EXCLUDE_ADULT_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [isFarmRun, setIsFarmRun] = useState(false);
-  const [config, setConfig] = useState<SpooferConfig>({
+  const [config, setConfig] = useState<SpooferConfig>(() => ({
     limit: null,
     batch_size: 8,
     hold_duration_secs: 15,
@@ -26,7 +36,17 @@ export const App: React.FC = () => {
     cooldown_every_n_batches: 25,
     cooldown_seconds: 30,
     jitter_enabled: false,
-  });
+    exclude_adult: readExcludeAdult(),
+  }));
+
+  // The 18+ checkbox is remembered between launches.
+  useEffect(() => {
+    try {
+      localStorage.setItem(EXCLUDE_ADULT_KEY, String(Boolean(config.exclude_adult)));
+    } catch {
+      // storage unavailable: the choice just lasts for this session
+    }
+  }, [config.exclude_adult]);
 
   const {
     isRunning: isDiscordRunning,
@@ -124,6 +144,7 @@ export const App: React.FC = () => {
               tickData={tickData}
               isFarmRun={isFarmRun}
               isBetaEnabled={Boolean(config.beta_enabled)}
+              excludeAdult={Boolean(config.exclude_adult)}
               isFetching={isFetchingDatabase}
               onStart={handleStartFarm}
               onStop={actions.stop}

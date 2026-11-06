@@ -130,6 +130,9 @@ const en = {
     'Adds a random offset to the batch hold time so the behaviour looks natural to Discord servers.',
   'settings.skip': 'Skip previously spoofed games',
   'settings.skipDesc': 'Excludes games that were already spoofed in previous sessions.',
+  'settings.excludeAdult': 'Skip 18+ games',
+  'settings.excludeAdultDesc':
+    'Leaves out games Discord tags as erotic or rates Adults Only (about 480 games). Some 18+ games without these tags may still get through.',
   'settings.discordStatus': 'Discord client status',
   'settings.discordRunning': 'Discord desktop client is running',
   'settings.discordNotRunning': 'Discord is not running. Start Discord so games can be counted.',
@@ -313,6 +316,9 @@ const ru: Record<MessageKey, string> = {
   'settings.skip': 'Пропускать ранее запущенные игры',
   'settings.skipDesc':
     'Исключает повторный запуск игр, которые уже были успешно эмулированы в предыдущих сессиях.',
+  'settings.excludeAdult': 'Не добавлять игры 18+',
+  'settings.excludeAdultDesc':
+    'Пропускает игры, которые Discord отмечает как эротические или с рейтингом «только для взрослых» (около 480 игр). Часть 18+ игр без этих меток всё равно может попасться.',
   'settings.discordStatus': 'Статус клиента Discord',
   'settings.discordRunning': 'Десктопный клиент Discord активен',
   'settings.discordNotRunning': 'Discord не запущен. Запустите Discord для учета игр.',

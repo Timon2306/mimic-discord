@@ -64,6 +64,7 @@ interface FarmViewProps {
   tickData: SpooferTickEvent;
   isFarmRun: boolean;
   isBetaEnabled: boolean;
+  excludeAdult: boolean;
   isFetching: boolean;
   onStart: (gameIds: string[], durationSecs: number | null) => void;
   onStop: () => void;
@@ -90,6 +91,7 @@ export const FarmView: React.FC<FarmViewProps> = ({
   tickData,
   isFarmRun,
   isBetaEnabled,
+  excludeAdult,
   isFetching,
   onStart,
   onStop,
@@ -119,9 +121,13 @@ export const FarmView: React.FC<FarmViewProps> = ({
   }, [durationSecs]);
 
   // With beta off the backend only runs native games, so only those are offered.
+  // 18+ games are hidden too when the settings checkbox is on.
   const availableGames = useMemo(
-    () => (isBetaEnabled ? games : games.filter((g) => g.method === 'process')),
-    [games, isBetaEnabled]
+    () =>
+      games.filter(
+        (g) => (isBetaEnabled || g.method === 'process') && !(excludeAdult && g.adult)
+      ),
+    [games, isBetaEnabled, excludeAdult]
   );
 
   const selectedGames = useMemo(

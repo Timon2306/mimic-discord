@@ -29,6 +29,7 @@
 - You do **not** need Node.js, Rust or any commands. Those are only for developers (see [Building from source](#build)).
 - Start the **Discord desktop app** before mimic (the browser version does not work).
 - If Windows shows "Windows protected your PC", click **More info → Run anyway**. The app is not code-signed, which is why SmartScreen warns about it.
+- **Do not run mimic while playing games with anti-cheat** (Rust, Valorant, Fortnite, Apex, CS2, etc.). mimic does not touch games, but it is better not to keep it open next to an anti-cheat. Close the game first, then start mimic.
 
 ---
 
@@ -128,6 +129,7 @@ The portable Windows build is the very same binary as the installed one — it j
 - **Tested on Windows only**, with Discord games tracked up to **~10,000 games in the badge** (Mythic «Универсал»).
 - **Linux: native mode covers only 8 games.** Discord's public detectable database contains just eight Linux executables — Hearts of Iron IV, Factorio, Throne of Lies, VA-11 HALL-A, Fields of Mistria, CS:GO, Move or Die and Terraria — so process-based spoofing cannot go past them. Wine/Proton does not help: those Windows titles exist only as `win32` entries, and the Linux Discord client does not match their processes. The remaining ~24,900 titles are available only through the beta Discord RPC mode, which Discord may not credit to your profile at all.
 - A target of **24,000 games is unverified** — it may work, may be throttled, or may have no effect at all.
+- **Do not run mimic at the same time as games with anti-cheat** (EAC, BattlEye, Vanguard, VAC, etc.). mimic never injects into games or reads their memory, but it does start processes named after games, and we cannot guarantee how an anti-cheat will react to that.
 - Game activity spoofing is not officially supported by Discord. Use it at your own risk.
 
 ---

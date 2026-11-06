@@ -189,6 +189,24 @@ pub async fn run_spoofer(
             .collect(),
     };
 
+    let mode_filtered_games: Vec<SpoofableGame> = if config.exclude_adult {
+        let before_count = mode_filtered_games.len();
+        let filtered: Vec<SpoofableGame> =
+            mode_filtered_games.into_iter().filter(|g| !g.adult).collect();
+        let skipped = before_count - filtered.len();
+        if skipped > 0 {
+            let message = if is_russian() {
+                format!("Пропуск {} игр 18+.", skipped)
+            } else {
+                format!("Skipped {} 18+ games.", skipped)
+            };
+            log_event(&app, "info", &message);
+        }
+        filtered
+    } else {
+        mode_filtered_games
+    };
+
     let is_farm = !config.farm_game_ids.is_empty();
     let history = load_history();
     let mut pool: Vec<SpoofableGame> = if is_farm {

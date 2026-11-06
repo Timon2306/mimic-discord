@@ -416,6 +416,29 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           />
         </div>
 
+        {/* Section 4b: Leave out 18+ games */}
+        <div className="flex items-center justify-between p-3.5 rounded-lg bg-[#1b1c28] border border-white/5">
+          <div className="pr-4">
+            <div className="text-xs font-semibold text-white">
+              {t('settings.excludeAdult')}
+            </div>
+            <div className="text-[11px] text-neutral-400 mt-0.5">
+              {t('settings.excludeAdultDesc')}
+            </div>
+          </div>
+          <input
+            type="checkbox"
+            checked={config.exclude_adult ?? false}
+            onChange={(e) =>
+              onConfigChange((prev) => ({
+                ...prev,
+                exclude_adult: e.target.checked,
+              }))
+            }
+            className="w-5 h-5 rounded bg-[#242636] border-white/20 text-[#5865F2] focus:ring-[#5865F2] cursor-pointer"
+          />
+        </div>
+
         {/* Section 5: Discord Client Status Card */}
         <div className="flex items-center justify-between p-3.5 rounded-lg bg-[#1b1c28] border border-white/5">
           <div className="flex items-center gap-3">

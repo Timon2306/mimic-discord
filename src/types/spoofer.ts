@@ -20,6 +20,8 @@ export interface SpoofableGameItem {
   arguments?: string | null;
   icon_hash?: string;
   method: 'process' | 'rpc';
+  /** 18+ game (Discord "Erotic" theme or ESRB Adults Only). */
+  adult?: boolean;
 }
 
 export interface SpooferTickEvent {
@@ -93,4 +95,6 @@ export interface SpooferConfig {
   farm_game_ids?: string[];
   /** Farm time limit; null keeps the games running until stopped. */
   farm_duration_secs?: number | null;
+  /** Leave out 18+ games. */
+  exclude_adult?: boolean;
 }

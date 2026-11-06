@@ -105,6 +105,9 @@ pub struct SpooferConfig {
     /// Farm mode time limit; `None` keeps the games running until stopped.
     #[serde(default)]
     pub farm_duration_secs: Option<u64>,
+    /// Leaves out 18+ games (Discord "Erotic" theme or ESRB Adults Only).
+    #[serde(default)]
+    pub exclude_adult: bool,
 }
 
 pub struct AppState {
