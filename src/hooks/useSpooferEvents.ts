@@ -70,46 +70,61 @@ export function useSpooferEvents() {
 
   // Listen to Tauri events
   useEffect(() => {
-    let unlistenTick: (() => void) | undefined;
-    let unlistenLog: (() => void) | undefined;
-    let unlistenStatus: (() => void) | undefined;
-    let unlistenFetch: (() => void) | undefined;
+    let disposed = false;
+    const unlistenCallbacks: (() => void)[] = [];
+
+    const subscribe = async <T>(
+      listen: (handler: (payload: T) => void) => Promise<() => void>,
+      handler: (payload: T) => void,
+    ) => {
+      const unlisten = await listen((payload) => {
+        if (!disposed) handler(payload);
+      });
+
+      // Cleanup can run before Tauri finishes registering the listener.
+      if (disposed) {
+        unlisten();
+      } else {
+        unlistenCallbacks.push(unlisten);
+      }
+    };
 
     const setupListeners = async () => {
       try {
-        unlistenTick = await tauriApi.onTick((payload) => {
-          setTickData(payload);
-        });
-
-        unlistenLog = await tauriApi.onLog((payload) => {
-          addLog(payload.level, payload.message);
-        });
-
-        unlistenStatus = await tauriApi.onStatus((payload) => {
-          setStatus(payload.status);
-          if (payload.status === 'error' && payload.message) {
-            setErrorMessage(payload.message);
-          } else if (payload.status !== 'error') {
-            setErrorMessage(null);
-          }
-        });
-
-        unlistenFetch = await tauriApi.onFetchProgress((payload) => {
-          setTotalDatabaseGames(payload.total_fetched);
-          setProcessGamesCount(payload.process_count);
-          setRpcGamesCount(payload.rpc_count);
-          if (payload.history_process_count !== undefined) {
-            setHistoryProcessCount(payload.history_process_count);
-          }
-          if (payload.history_rpc_count !== undefined) {
-            setHistoryRpcCount(payload.history_rpc_count);
-          }
-          setIsFetchingDatabase(payload.is_loading);
-        });
+        await Promise.all([
+          subscribe(tauriApi.onTick, (payload) => {
+            setTickData(payload);
+          }),
+          subscribe(tauriApi.onLog, (payload) => {
+            addLog(payload.level, payload.message);
+          }),
+          subscribe(tauriApi.onStatus, (payload) => {
+            setStatus(payload.status);
+            if (payload.status === 'error' && payload.message) {
+              setErrorMessage(payload.message);
+            } else if (payload.status !== 'error') {
+              setErrorMessage(null);
+            }
+          }),
+          subscribe(tauriApi.onFetchProgress, (payload) => {
+            setTotalDatabaseGames(payload.total_fetched);
+            setProcessGamesCount(payload.process_count);
+            setRpcGamesCount(payload.rpc_count);
+            if (payload.history_process_count !== undefined) {
+              setHistoryProcessCount(payload.history_process_count);
+            }
+            if (payload.history_rpc_count !== undefined) {
+              setHistoryRpcCount(payload.history_rpc_count);
+            }
+            setIsFetchingDatabase(payload.is_loading);
+          }),
+        ]);
+        if (disposed) return;
 
         // Initialize state snapshot from Rust
         try {
           const state = await tauriApi.getSpooferState();
+          if (disposed) return;
           setStatus(state.status);
           setTotalDatabaseGames(state.total_count);
           setProcessGamesCount(state.process_count);
@@ -132,10 +147,8 @@ export function useSpooferEvents() {
     setupListeners();
 
     return () => {
-      unlistenTick?.();
-      unlistenLog?.();
-      unlistenStatus?.();
-      unlistenFetch?.();
+      disposed = true;
+      unlistenCallbacks.forEach((unlisten) => unlisten());
     };
   }, [addLog]);
 
