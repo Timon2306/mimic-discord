@@ -30,6 +30,7 @@
 - Start the **Discord desktop app** before mimic (the browser version does not work).
 - If Windows shows "Windows protected your PC", click **More info → Run anyway**. The app is not code-signed, which is why SmartScreen warns about it.
 - **Do not run mimic while playing games with anti-cheat** (Rust, Valorant, Fortnite, Apex, CS2, etc.). mimic does not touch games, but it is better not to keep it open next to an anti-cheat. Close the game first, then start mimic.
+- If Discord's "Registered Games" tab freezes after mimic, see [how to fix it](#registered-games).
 
 ---
 
@@ -118,6 +119,23 @@ Every release ships four files:
 | Linux | `mimic_<version>_amd64.deb` | Debian/Ubuntu package |
 
 The portable Windows build is the very same binary as the installed one — it just is not wrapped in an installer. It still needs the WebView2 runtime, which ships with Windows 10/11 by default.
+
+---
+
+<a id="registered-games"></a>
+
+## 🧊 "Registered Games" tab freezes
+
+Discord remembers every game it has detected and keeps that list on your PC. After mimic the list holds thousands of games, and **Settings → Registered Games** tries to render all of them at once, so it freezes. The mobile app has no such tab, which is why it opens there.
+
+To clear the list:
+
+1. Fully quit Discord (right-click the tray icon → **Quit Discord**).
+2. Press **Win + R**, paste `%APPDATA%\discord` and press **Enter**.
+3. Delete the `Local Storage` folder.
+4. Start Discord and log in again.
+
+Only local client settings are reset and you will have to log in again (with 2FA if enabled). Servers, messages, badges and game hours are stored on Discord's servers and are not affected.
 
 ---
 
