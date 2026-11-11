@@ -9,6 +9,7 @@ import type {
   SpoofableGameItem,
   FetchGamesResponse,
   SpooferStateResponse,
+  FakeStatusConfig,
 } from '@/types/spoofer';
 
 const isTauriRuntime = (): boolean =>
@@ -59,6 +60,25 @@ export const tauriApi = {
 
   getSpooferState: (): Promise<SpooferStateResponse> => {
     return invoke('get_spoofer_state');
+  },
+
+  // Fake status: one custom activity, independent of the spoofer run
+  startFakeStatus: (config: FakeStatusConfig): Promise<void> => {
+    return invoke('start_fake_status', { config });
+  },
+
+  stopFakeStatus: (): Promise<void> => {
+    return invoke('stop_fake_status');
+  },
+
+  getFakeStatus: (): Promise<boolean> => {
+    if (!isTauriRuntime()) return Promise.resolve(false);
+    return invoke('get_fake_status');
+  },
+
+  // Fires when Discord itself dropped the status (closed or restarted)
+  onFakeStatusEnded: (cb: () => void): Promise<UnlistenFn> => {
+    return listen('fake_status_ended', () => cb());
   },
 
   // Keeps the Rust-side runtime logs in the language picked in Settings

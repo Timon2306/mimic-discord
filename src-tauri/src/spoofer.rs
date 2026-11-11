@@ -177,7 +177,10 @@ pub async fn run_spoofer(
     resume_notify: Arc<Notify>,
     active_pids: Arc<Mutex<Vec<u32>>>,
 ) {
+    let is_farm = !config.farm_game_ids.is_empty();
+    // The farm runs exactly the games the user picked, so the rotation mode does not apply
     let mode_filtered_games: Vec<SpoofableGame> = match config.spoof_mode {
+        _ if is_farm => all_games,
         SpoofMode::Hybrid => all_games,
         SpoofMode::ProcessOnly => all_games
             .into_iter()
@@ -207,7 +210,6 @@ pub async fn run_spoofer(
         mode_filtered_games
     };
 
-    let is_farm = !config.farm_game_ids.is_empty();
     let history = load_history();
     let mut pool: Vec<SpoofableGame> = if is_farm {
         select_farm_games(&app, mode_filtered_games, &config.farm_game_ids)

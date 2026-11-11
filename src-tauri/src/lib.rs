@@ -1,5 +1,6 @@
 pub mod commands;
 pub mod discord;
+pub mod fake_status;
 pub mod history;
 pub mod i18n;
 pub mod rpc;
@@ -26,6 +27,9 @@ pub fn run() {
             commands::import_history,
             commands::open_external_url,
             commands::set_language,
+            commands::start_fake_status,
+            commands::stop_fake_status,
+            commands::get_fake_status,
         ])
         .run(tauri::generate_context!())
         .expect("error while running mimic desktop application");

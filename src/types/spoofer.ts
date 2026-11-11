@@ -98,3 +98,17 @@ export interface SpooferConfig {
   /** Leave out 18+ games. */
   exclude_adult?: boolean;
 }
+
+/** One custom Discord status that stays until it is stopped. */
+export interface FakeStatusConfig {
+  /** Discord application ID of the game the status is shown for. */
+  game_id: string;
+  /** Replaces the game's name in the status. */
+  name?: string | null;
+  details?: string | null;
+  state?: string | null;
+  /** Direct https link to a picture. */
+  image_url?: string | null;
+  /** 0 playing, 2 listening, 3 watching, 5 competing. */
+  activity_type?: number;
+}

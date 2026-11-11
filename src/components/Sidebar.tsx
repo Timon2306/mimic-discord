@@ -1,8 +1,8 @@
 import React from 'react';
-import { LayoutDashboard, Timer, Gamepad2, Terminal, Settings } from 'lucide-react';
+import { LayoutDashboard, Timer, Smile, Gamepad2, Terminal, Settings } from 'lucide-react';
 import { useI18n } from '@/i18n/I18nProvider';
 
-export type ActiveTab = 'dashboard' | 'farm' | 'database' | 'console' | 'settings';
+export type ActiveTab = 'dashboard' | 'farm' | 'status' | 'database' | 'console' | 'settings';
 
 interface SidebarProps {
   activeTab: ActiveTab;
@@ -20,6 +20,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const navItems = [
     { id: 'dashboard' as const, label: t('nav.dashboard'), icon: LayoutDashboard },
     { id: 'farm' as const, label: t('nav.farm'), icon: Timer },
+    { id: 'status' as const, label: t('nav.status'), icon: Smile },
     { id: 'database' as const, label: t('nav.database'), icon: Gamepad2 },
     { id: 'console' as const, label: t('nav.console'), icon: Terminal },
     { id: 'settings' as const, label: t('nav.settings'), icon: Settings },
@@ -84,7 +85,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Footer Info */}
       <div className="px-2 text-[11px] text-neutral-500 font-mono border-t border-white/5 pt-3">
-        v1.3.3 • mimic-discord
+        v1.3.4 • mimic-discord
       </div>
     </aside>
   );

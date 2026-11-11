@@ -154,6 +154,47 @@ impl DiscordRpcSession {
         Ok(())
     }
 
+    /// Sets a full custom activity and returns Discord's error, if any
+    pub async fn set_custom_activity(&mut self, activity: Value, pid: u32) -> Result<(), String> {
+        let nonce = format!(
+            "custom-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis()
+        );
+
+        let payload = json!({
+            "cmd": "SET_ACTIVITY",
+            "args": { "pid": pid, "activity": activity },
+            "nonce": nonce
+        })
+        .to_string();
+
+        self.write_packet(OP_FRAME, &payload).await?;
+
+        let response =
+            tokio::time::timeout(std::time::Duration::from_secs(5), self.read_packet()).await;
+        if let Ok(Ok((_, text))) = response {
+            if let Ok(parsed) = serde_json::from_str::<Value>(&text) {
+                if parsed.get("evt").and_then(|v| v.as_str()) == Some("ERROR") {
+                    let message = parsed
+                        .pointer("/data/message")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("unknown error");
+                    return Err(format!("Discord: {}", message));
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Resolves once Discord closes the connection
+    pub async fn wait_closed(&mut self) {
+        while self.read_packet().await.is_ok() {}
+    }
+
     /// Clears the activity
     pub async fn clear_activity(&mut self, pid: u32) -> Result<(), String> {
         let nonce = format!(

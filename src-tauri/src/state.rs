@@ -118,6 +118,8 @@ pub struct AppState {
     pub resume_notify: Arc<Notify>,
     pub active_pids: Arc<Mutex<Vec<u32>>>,
     pub current_task: Arc<Mutex<Option<tokio::task::JoinHandle<()>>>>,
+    /// Stops the fake status when sent to or dropped; closed once the status is gone.
+    pub fake_status_stop: Arc<Mutex<Option<tokio::sync::oneshot::Sender<()>>>>,
 }
 
 impl AppState {
@@ -130,6 +132,7 @@ impl AppState {
             resume_notify: Arc::new(Notify::new()),
             active_pids: Arc::new(Mutex::new(Vec::new())),
             current_task: Arc::new(Mutex::new(None)),
+            fake_status_stop: Arc::new(Mutex::new(None)),
         }
     }
 }

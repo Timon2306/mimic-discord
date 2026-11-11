@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Sidebar, type ActiveTab } from '@/components/Sidebar';
 import { DashboardView } from '@/components/DashboardView';
 import { FarmView } from '@/components/FarmView';
+import { FakeStatusView } from '@/components/FakeStatusView';
 import { DatabaseView } from '@/components/DatabaseView';
 import { ConsoleView } from '@/components/ConsoleView';
 import { SettingsView } from '@/components/SettingsView';
@@ -148,6 +149,13 @@ export const App: React.FC = () => {
               isFetching={isFetchingDatabase}
               onStart={handleStartFarm}
               onStop={actions.stop}
+            />
+          )}
+
+          {activeTab === 'status' && (
+            <FakeStatusView
+              excludeAdult={Boolean(config.exclude_adult)}
+              isFetching={isFetchingDatabase}
             />
           )}
 

@@ -1,6 +1,6 @@
 [package]
 name = "mimic"
-version = "1.3.3"
+version = "1.3.4"
 description = "Discord Game Detection Booster"
 authors = ["Timon2306"]
 license = "MIT"

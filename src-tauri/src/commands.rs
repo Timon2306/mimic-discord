@@ -356,3 +356,38 @@ pub fn import_history(json_data: String) -> Result<usize, String> {
     save_history(&current)?;
     Ok(added)
 }
+
+/// Shows one custom status in Discord until it is stopped; replaces the previous one.
+#[tauri::command]
+pub async fn start_fake_status(
+    config: crate::fake_status::FakeStatusConfig,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<(), String> {
+    let mut slot = state.fake_status_stop.lock().await;
+    if let Some(previous) = slot.take() {
+        let _ = previous.send(());
+        // Let Discord drop the old status before the new connection sets its own
+        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+    }
+    *slot = Some(crate::fake_status::start(app, config).await?);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn stop_fake_status(state: State<'_, AppState>) -> Result<(), String> {
+    if let Some(stop) = state.fake_status_stop.lock().await.take() {
+        let _ = stop.send(());
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_fake_status(state: State<'_, AppState>) -> Result<bool, String> {
+    Ok(state
+        .fake_status_stop
+        .lock()
+        .await
+        .as_ref()
+        .is_some_and(|stop| !stop.is_closed()))
+}
